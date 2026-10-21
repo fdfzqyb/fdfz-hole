@@ -130,7 +130,7 @@ async function report() {
         <Icon name="warn" :size="20" />
         <span>
           <b>{{ t('謝謝你說出來。如果你現在有傷害自己的念頭，請先找能馬上陪你的人。') }}</b>
-          {{ t(HELP.hotlineName) }} {{ HELP.hotline }}；{{ HELP.center }} {{ HELP.centerPhone }}。<br />
+          {{ t(HELP.hotlineName) }} {{ HELP.hotline }}；{{ HELP.counselor }}。<br />
           <span class="tiny">{{ t('這是系統依字詞自動顯示的提示，不代表我們判斷你有危險。') }}</span>
         </span>
       </div>
@@ -201,7 +201,7 @@ async function report() {
     <template v-else>
       <p>{{ t('這則訊息已經換了 {max} 次傾聽者，不能再換了。我們已經請樹洞管理員關注。', { max: maxSwaps }) }}</p>
       <p class="note"><Icon name="phone" :size="20" /><span><b>{{ t(HELP.hotlineName) }}</b>{{ HELP.hotline }}</span></p>
-      <p class="note"><Icon name="user" :size="20" /><span><b>{{ HELP.center }}</b>{{ HELP.place }}，{{ HELP.hours }}，{{ HELP.centerPhone }}</span></p>
+      <p class="note"><Icon name="user" :size="20" /><span><b>{{ HELP.counselor }}</b>{{ HELP.counselorWhere }}</span></p>
       <div class="actions end"><button class="btn" type="button" @click="swapOpen = false">{{ t('知道了') }}</button></div>
     </template>
   </Modal>

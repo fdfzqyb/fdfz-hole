@@ -1,5 +1,5 @@
 <script setup>
-// 求助資源一直顯示（不靠關鍵詞觸發）。按「我現在需要馬上有人幫忙」時顯示熱線和諮詢中心，
+// 求助資源一直顯示（不靠關鍵詞觸發）。按「我現在需要馬上有人幫忙」時顯示熱線和心理老師，
 // 有進行中的對話時可以同時通知樹洞管理員（預設勾選）
 import { t } from '../i18n'
 import { ref } from 'vue'
@@ -45,7 +45,7 @@ async function send() {
       <Icon name="phone" style="margin-top: 2px" />
       <span class="small">
         <b>{{ t('需要馬上有人陪？') }}</b><br />
-        {{ HELP.center }}，{{ HELP.place }}，{{ HELP.hours }}，{{ HELP.centerPhone }}<br />
+        {{ HELP.counselor }}，{{ HELP.counselorWhere }}<br />
         {{ t(HELP.hotlineName) }} {{ HELP.hotline }}
       </span>
     </div>
@@ -57,7 +57,7 @@ async function send() {
       <p>{{ t('如果你現在有危險，請先打電話，或去找身邊的人，這比等網上回覆快。') }}</p>
       <div class="vstack" style="gap: 8px">
         <p class="note"><Icon name="phone" :size="20" /><span><b>{{ t(HELP.hotlineName) }}</b>{{ HELP.hotline }}</span></p>
-        <p class="note"><Icon name="user" :size="20" /><span><b>{{ HELP.center }}</b>{{ HELP.place }}，{{ HELP.hours }}，{{ HELP.centerPhone }}</span></p>
+        <p class="note"><Icon name="user" :size="20" /><span><b>{{ HELP.counselor }}</b>{{ HELP.counselorWhere }}</span></p>
       </div>
       <template v-if="aid">
         <label class="check">

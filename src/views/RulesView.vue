@@ -55,7 +55,7 @@ const SECTIONS = [
       <h3>{{ t('樹洞不是急救') }}</h3>
       <p>{{ t('傾聽者是同學，不是專業人員，回覆也可能要等幾小時。如果你現在有危險，請直接聯絡：') }}</p>
       <p class="note"><Icon name="phone" :size="20" /><span><b>{{ t(HELP.hotlineName) }}</b>{{ HELP.hotline }}</span></p>
-      <p class="note"><Icon name="user" :size="20" /><span><b>{{ HELP.center }}</b>{{ HELP.place }}，{{ HELP.hours }}，{{ HELP.centerPhone }}</span></p>
+      <p class="note"><Icon name="user" :size="20" /><span><b>{{ HELP.counselor }}</b>{{ HELP.counselorWhere }}</span></p>
     </div>
   </div>
   <TabBar />

@@ -66,7 +66,7 @@ async function submit() {
         <Icon name="warn" :size="20" />
         <span>
           <b>{{ t('你現在還好嗎？如果有傷害自己的念頭，請先找能馬上陪你的人。') }}</b>
-          {{ HELP.center }} {{ HELP.centerPhone }}；{{ t(HELP.hotlineName) }} {{ HELP.hotline }}。{{ t('訊息照樣可以送出。') }}<br />
+          {{ HELP.counselor }}；{{ t(HELP.hotlineName) }} {{ HELP.hotline }}。{{ t('訊息照樣可以送出。') }}<br />
           <span class="tiny">{{ t('這是系統依字詞自動顯示的提示，不代表我們判斷你有危險。') }}</span>
         </span>
       </div>

@@ -262,7 +262,7 @@ const myId = computed(() => auth.session?.user?.id)
     </div>
     <label class="field">
       <span>{{ t('查詢理由（必填）') }}</span>
-      <textarea v-model="revealReason" :placeholder="t('例如：發出者提到自傷念頭，需要通知心理諮詢中心')" style="min-height: 80px" />
+      <textarea v-model="revealReason" :placeholder="t('例如：發出者提到自傷念頭，需要通知心理老師')" style="min-height: 80px" />
     </label>
     <p v-if="revealError" class="error">{{ t(revealError) }}</p>
     <div class="actions end">
@@ -275,7 +275,7 @@ const myId = computed(() => auth.session?.user?.id)
     <p v-if="actFor?.kind === 'suspend'" class="small">{{ t('他手上所有進行中的對話會轉給別人，之後不會再派單給他，直到有管理員恢復資格。') }}</p>
     <label class="field">
       <span>{{ actFor?.kind === 'suspend' ? t('理由（必填）') : t('處理說明（選填）') }}</span>
-      <textarea v-model="actNote" :placeholder="actFor?.kind === 'suspend' ? '' : t('例如：已聯絡心理諮詢中心跟進')" style="min-height: 80px" />
+      <textarea v-model="actNote" :placeholder="actFor?.kind === 'suspend' ? '' : t('例如：已聯絡心理老師跟進')" style="min-height: 80px" />
     </label>
     <p v-if="actError" class="error">{{ t(actError) }}</p>
     <div class="actions end">
