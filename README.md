@@ -51,3 +51,22 @@ Cloudflare 控制台 → Workers & Pages → 建立 → 連接 GitHub，選這�
 和權益牆一樣有簡體（預設）和繁體兩種介面，在帳號頁切換。程式裡的文字一律寫繁體，包在 `t('…')` 裡，再到 `src/locales/zh-Hans.js` 加一行「繁體: 簡體」對照。同學寫的內容和資料庫裡的測驗題照原文顯示。
 
 改了 `src/constants.js` 的傾聽者承諾條文，要同時把資料庫 `hole_config.pledge_version` 改成新版本號，所有傾聽者會被要求重新勾選。
+
+## 寄信功能
+
+有新訊息派給傾聽者、傾聽者 12 小時沒回、有求助或檢舉時，資料庫會在 `hole_email_outbox` 記一筆。`supabase/functions/hole-mailer` 這個 Edge Function 每 5 分鐘由 pg_cron 叫一次，把這些記錄用 [Resend](https://resend.com) 寄出。
+
+- 信裡只說「有事要處理」和樹洞網址，**不放訊息內容和話題**。
+- 同一個人同一類通知在 5 分鐘內有好幾筆，只寄一封。
+- 超過一天還沒寄的記錄直接略過（例如寄信功能上線前累積的）。
+- 寄失敗時：網路問題或 Resend 忙線會下一輪重試；地址無效之類的錯誤不重試。
+
+設定步驟：
+
+1. Resend 註冊，Domains → Add Domain 填 `fdfz.click`，照它給的 DNS 記錄加到 Cloudflare（或用它的 Cloudflare 自動設定），按 Verify。
+2. Resend → API Keys → Create，權限選 Sending access。
+3. Supabase → Edge Functions → Secrets 新增 `RESEND_API_KEY`。寄件人預設是 `FDFZ 树洞 <hole@fdfz.click>`，要改就再加 `MAIL_FROM`。
+4. Supabase → Edge Functions → Deploy a new function → Via Editor，名稱 `hole-mailer`，貼上 `supabase/functions/hole-mailer/index.ts` 部署；到函數設定關掉 Verify JWT（pg_cron 叫它時沒有登入資訊；任何人叫它也只是提早寄出該寄的信）。
+5. Supabase → Database → Extensions 開啟 `pg_net`，再到 SQL Editor 執行 `supabase/hole_mailer.sql`。
+
+改了 `index.ts` 要回到 Supabase 的函數頁重新貼上部署，Cloudflare 不會幫你部署它。
