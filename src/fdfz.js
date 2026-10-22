@@ -1,4 +1,4 @@
-// fdfz.click 各站共用的設定。權益牆、樹洞、前帆報都放一份一模一樣的，改了要一起改。
+// fdfz.click 各站共用的設定。每個站都放一份一模一樣的，改了要一起改。
 
 export const ACCOUNT_URL = 'https://account.fdfz.click'
 
