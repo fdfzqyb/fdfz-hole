@@ -1,10 +1,17 @@
 import { createRouter, createWebHistory } from 'vue-router'
 import { auth, authReady, isApproved, isHoleAdmin } from './auth'
+import { accountUrl } from './fdfz'
 
-// meta.public：不用登入也能看；meta.admin：只有樹洞管理員能進
+// 登入、等待校園卡審核、改密碼都在帳號中心 account.fdfz.click，這裡舊的網址直接轉過去
+const toAccount = (path) => () => {
+  window.location.assign(accountUrl(path, location.origin + '/'))
+  return false
+}
+
+// meta.admin：只有樹洞管理員能進
 const routes = [
-  { path: '/login', component: () => import('./views/LoginView.vue'), meta: { public: true } },
-  { path: '/pending', component: () => import('./views/PendingView.vue'), meta: { public: true } },
+  { path: '/login', beforeEnter: toAccount('/login'), component: {} },
+  { path: '/pending', beforeEnter: toAccount('/pending'), component: {} },
   { path: '/', component: () => import('./views/WriteView.vue') },
   { path: '/mine', component: () => import('./views/MineView.vue') },
   { path: '/mine/:id', component: () => import('./views/ThreadView.vue') },
@@ -25,11 +32,14 @@ export const router = createRouter({
 
 router.beforeEach(async (to) => {
   await authReady
-  if (to.path === '/login' && auth.session) return isApproved() ? '/' : '/pending'
-  if (to.meta.public) return true
-  if (!auth.session) return '/login'
-  // 校園卡還沒通過，或權益部重設了臨時密碼：都要先回權益牆處理
-  if (!isApproved() || auth.profile?.must_change_password) return '/pending'
+  if (['/login', '/pending'].includes(to.path)) return true
+  // 沒登入、校園卡還沒通過、權益部重設了臨時密碼：都送到帳號中心處理，好了會回到這一頁
+  const back = location.origin + to.fullPath
+  const fix = !auth.session ? '/login' : !isApproved() ? '/pending' : auth.profile?.must_change_password ? '/' : null
+  if (fix) {
+    window.location.assign(accountUrl(fix, back))
+    return false
+  }
   if (to.meta.admin && !isHoleAdmin()) return '/'
   return true
 })
