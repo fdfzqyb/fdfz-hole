@@ -1,8 +1,7 @@
 import { reactive } from 'vue'
 import { supabase } from './supabase'
 
-// 帳號和權益牆共用（同一個 Supabase 專案）。註冊、校園卡驗證、改密碼都在權益牆做。
-export const WALL_URL = 'https://wall.fdfz.click'
+// 帳號和權益牆共用（同一個 Supabase 專案）。登入、註冊、校園卡驗證、改密碼都在帳號中心 account.fdfz.click 做。
 
 // 全站共用的登入狀態：session 是 Supabase 的登入資訊，profile 是 profiles 表裡自己那一筆，
 // hole 是樹洞自己的資料：是不是樹洞管理員、傾聽者資格、可調參數
@@ -58,6 +57,14 @@ async function loadSession() {
   await loadProfile()
 }
 
+// 在別的 fdfz.click 站登入或登出後，cookie 變了，但這個分頁不會收到通知；
+// 所以每次切回這個分頁都重新讀一次，換了人或被登出就重新載入，讓路由重新判斷該去哪
+async function recheck() {
+  if (document.visibilityState !== 'visible') return
+  const { data } = await supabase.auth.getSession()
+  if (data.session?.user.id !== auth.session?.user.id) location.reload()
+}
+
 export async function initAuth() {
   // 網路很慢時不要一直空白：15 秒還沒好就先提示，之後連上了照樣會進站
   const slow = setTimeout(() => {
@@ -81,6 +88,7 @@ export async function initAuth() {
     // 不能在這個回呼裡直接 await Supabase 查詢，所以放到下一輪執行
     setTimeout(loadProfile, 0)
   })
+  document.addEventListener('visibilitychange', recheck)
 }
 
 export const isApproved = () => auth.profile?.verify_status === 'approved'
@@ -93,20 +101,6 @@ export function listenerState() {
   if (l.suspended_at) return 'suspended'
   if (l.pledge_version !== auth.hole.config?.pledge_version) return 'pledge'
   return 'qualified'
-}
-
-// 輸入八位數字當學號，否則當 email（和權益牆一樣）
-export async function signIn(account, password) {
-  let email = account.trim()
-  if (/^\d{8}$/.test(email)) {
-    const { data, error } = await supabase.rpc('login_email', { sid: email, pw: password })
-    if (error || !data) return '學號或密碼錯誤'
-    email = data
-  }
-  const { error } = await supabase.auth.signInWithPassword({ email, password })
-  if (!error) return null
-  if (error.message.includes('Email not confirmed')) return '請先到信箱點擊驗證連結'
-  return '帳號或密碼錯誤'
 }
 
 export async function signOut() {

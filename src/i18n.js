@@ -1,12 +1,15 @@
 import { readonly, ref } from 'vue'
 import { simplified } from './locales/zh-Hans'
+import { readCookie, writeCookie } from './fdfz'
 
-const STORAGE_KEY = 'fdfz-hole-language'
+// 語言設定存在 .fdfz.click 的 cookie，各站共用；還沒有 cookie 時沿用以前存在這個網站的設定
+const COOKIE = 'fdfz-lang'
+const OLD_STORAGE_KEY = 'fdfz-hole-language'
 const DEFAULT_LOCALE = 'zh-Hans'
 
 function readLocale() {
   try {
-    const saved = localStorage.getItem(STORAGE_KEY)
+    const saved = readCookie(COOKIE) ?? localStorage.getItem(OLD_STORAGE_KEY)
     return saved === 'zh-Hans' || saved === 'zh-Hant' ? saved : DEFAULT_LOCALE
   } catch {
     return DEFAULT_LOCALE
@@ -20,9 +23,9 @@ export function setLocale(value) {
   if (value !== 'zh-Hans' && value !== 'zh-Hant') return
   currentLocale.value = value
   try {
-    localStorage.setItem(STORAGE_KEY, value)
+    writeCookie(COOKIE, value)
   } catch {
-    // 儲存空間被停用時，仍允許在本次使用期間切換語言。
+    // cookie 被停用時，仍允許在本次使用期間切換語言。
   }
 }
 

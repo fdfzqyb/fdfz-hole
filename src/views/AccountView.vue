@@ -1,18 +1,17 @@
 <script setup>
 import { locale, setLocale, t } from '../i18n'
 import { computed } from 'vue'
-import { useRouter } from 'vue-router'
-import { auth, signOut, listenerState, isHoleAdmin, WALL_URL } from '../auth'
+import { auth, signOut, listenerState, isHoleAdmin } from '../auth'
+import { accountUrl } from '../fdfz'
 import TabBar from '../components/TabBar.vue'
 
-const router = useRouter()
 const profile = computed(() => auth.profile ?? {})
 const email = computed(() => auth.session?.user?.email ?? '')
 const LISTENER_LABEL = { none: '還不是傾聽者', pledge: '要重新確認承諾', suspended: '已暫停', qualified: '傾聽者' }
 
 async function logout() {
   await signOut()
-  router.push('/login')
+  window.location.assign(accountUrl('/login', location.origin + '/'))
 }
 </script>
 
@@ -37,7 +36,7 @@ async function logout() {
     </section>
 
     <router-link to="/rules" class="btn plain block">{{ t('樹洞守則') }}</router-link>
-    <a :href="`${WALL_URL}/account`" class="btn plain block">{{ t('修改密碼（在權益牆）') }}</a>
+    <a :href="accountUrl('/')" class="btn plain block">{{ t('帳號設定（改密碼）') }}</a>
     <button class="btn plain block" type="button" @click="logout">{{ t('登出') }}</button>
   </div>
   <TabBar />

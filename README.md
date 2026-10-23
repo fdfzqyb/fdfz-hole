@@ -4,7 +4,7 @@
 
 - 前端：Vite + Vue，部署在 Cloudflare Workers（和權益牆一樣）
 - 後端：和權益牆共用同一個 Supabase 專案與帳號。資料庫結構在專案資料夾的 `backend/hole/hole_schema.sql`，接在權益牆的 `supabase/schema.sql` 之後執行
-- 註冊、校園卡驗證、改密碼都在權益牆做，樹洞只負責登入
+- 登入、註冊、校園卡驗證、改密碼都在帳號中心 [account.fdfz.click](https://account.fdfz.click) 做。登入狀態存在 `.fdfz.click` 的 cookie（`src/supabase.js`、`src/fdfz.js`），在任何一站登入，樹洞就是登入狀態。這兩個檔案各站放一份一模一樣的，改了要一起改
 
 ## 上線前要填的
 
@@ -36,8 +36,7 @@ Cloudflare 控制台 → Workers & Pages → 建立 → 連接 GitHub，選這�
 
 | 頁面 | 路徑 | 誰能看 |
 | --- | --- | --- |
-| 登入 | `/login` | 所有人 |
-| 帳號未驗證／要改臨時密碼 | `/pending` | 登入後還不能使用的人 |
+| 登入、帳號未驗證、要改臨時密碼 | 在帳號中心，`/login`、`/pending` 舊網址會自動轉過去 | 所有人 |
 | 說說話（發訊息） | `/` | 已驗證同學 |
 | 我的對話、單則訊息（換人、多找一位、結束、檢舉） | `/mine`、`/mine/:id` | 發出者本人 |
 | 傾聽工作台、傾聽者對話 | `/listen`、`/listen/:aid` | 傾聽者 |
