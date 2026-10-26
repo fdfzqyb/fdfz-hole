@@ -164,7 +164,7 @@ async function report() {
         <div v-if="current?.can_request_extra" class="note warn">
           <Icon name="clock" :size="20" />
           <span>
-            {{ t('{who} 已經超過 24 小時沒回覆。你可以多找一位傾聽者，{who} 也會保留。', { who: who(current) }) }}
+            {{ t('{who} 已經超過 50 小時沒回覆。你可以多找一位傾聽者，{who} 也會保留。', { who: who(current) }) }}
             <button class="btn small alertfill" type="button" style="margin-top: 8px" :disabled="extraBusy" @click="requestExtra">{{ t('多找一位') }}</button>
           </span>
         </div>
