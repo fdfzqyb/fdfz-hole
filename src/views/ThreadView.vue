@@ -180,7 +180,7 @@ async function report() {
 
       <button v-if="isOpen && !convs.length" class="btn plain" type="button" @click="closeOpen = true">{{ t('結束這則訊息') }}</button>
 
-      <HelpCard :aid="activeAid" />
+      <HelpCard :aid="activeAid" :tid="thread.id" />
     </template>
   </div>
   <TabBar />

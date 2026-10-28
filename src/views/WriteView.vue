@@ -18,6 +18,7 @@ const busy = ref(false)
 const error = ref('')
 const words = ref([])
 const activeAid = ref(null)
+const activeTid = ref(null)
 
 onMounted(async () => {
   // 危機字詞只做溫和提示：不擋送出、不通知任何人
@@ -26,9 +27,12 @@ onMounted(async () => {
     supabase.rpc('hole_my_threads'),
   ])
   words.value = (w.data ?? []).map((x) => x.word)
-  // 按「我現在需要馬上有人幫忙」時，通知管理員要掛在一段進行中的對話上；用最近那則訊息的
-  const conv = (mine.data ?? []).flatMap((x) => x.conversations).find((c) => c.active)
+  // 按「我現在需要馬上有人幫忙」時，通知管理員要掛在一段進行中的對話上；用最近那則訊息的。
+  // 還沒有人接下的話，掛在最近一則還沒結束的訊息上
+  const threads = mine.data ?? []
+  const conv = threads.flatMap((x) => x.conversations).find((c) => c.active)
   activeAid.value = conv?.assignment_id ?? null
+  activeTid.value = threads.find((x) => !x.closed_at)?.id ?? null
 })
 const mentionsCrisis = computed(() => words.value.some((w) => body.value.includes(w)))
 
@@ -100,7 +104,7 @@ async function submit() {
       <Icon name="lock" :size="20" />
       <span>{{ t('遇到安全疑慮時，管理員可以查到你是誰。每次查詢都會留紀錄，所有管理員都看得到。') }}<router-link to="/rules">{{ t('讀完整守則') }}</router-link></span>
     </p>
-    <HelpCard :aid="activeAid" />
+    <HelpCard :aid="activeAid" :tid="activeTid" />
   </div>
   <TabBar />
 </template>
