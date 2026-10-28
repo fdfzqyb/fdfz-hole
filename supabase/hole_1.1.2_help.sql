@@ -52,7 +52,7 @@ begin
     update hole_reports
     set note = right(concat_ws(E'\n',
           note,
-          '（' || to_char(now() at time zone 'Asia/Shanghai', 'MM-DD HH24:MI') || ' 再次標記）' || coalesce(n, '')),
+          '（' || to_char(now() at time zone 'Asia/Taipei', 'MM-DD HH24:MI') || ' 再次標記）' || coalesce(n, '')),
         2000)
     where id = rid;
     perform hole_alert_admins();

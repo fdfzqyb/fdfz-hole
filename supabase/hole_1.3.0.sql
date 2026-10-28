@@ -56,14 +56,14 @@ end $$;
 -- 匿名統計
 -------------------------------------------------------------------------------
 
--- 最近 p_weeks 週（週一開始，北京時間），新的一週在前。只回傳次數和時間長度（分鐘）。
+-- 最近 p_weeks 週（週一開始，台北時間 UTC+8），新的一週在前。只回傳次數和時間長度（分鐘）。
 -- 「沒接」是派出後超過 pending_timeout 沒人接下（不算傾聽者逾時）；
 -- 「逾時」是發出者等滿 extra_after 後多找一位，會記在傾聽者的逾時次數上。
 create function hole_admin_stats(p_weeks int default 8) returns jsonb
 language plpgsql stable security definer set search_path = public as $$
 declare
   n int := least(greatest(coalesce(p_weeks, 8), 1), 52);
-  first_week timestamp := date_trunc('week', now() at time zone 'Asia/Shanghai') - (n - 1) * interval '1 week';
+  first_week timestamp := date_trunc('week', now() at time zone 'Asia/Taipei') - (n - 1) * interval '1 week';
 begin
   if not is_hole_admin() then
     raise exception '只有樹洞管理員可以查看';
@@ -93,8 +93,8 @@ begin
         'reports', (select count(*) from hole_reports r where r.kind = 'report' and r.created_at >= w.lo and r.created_at < w.hi)
       ) order by i desc)
       from generate_series(0, n - 1) i
-      cross join lateral (select (first_week + i * interval '1 week') at time zone 'Asia/Shanghai' as lo,
-                                 (first_week + (i + 1) * interval '1 week') at time zone 'Asia/Shanghai' as hi) w
+      cross join lateral (select (first_week + i * interval '1 week') at time zone 'Asia/Taipei' as lo,
+                                 (first_week + (i + 1) * interval '1 week') at time zone 'Asia/Taipei' as hi) w
       cross join lateral (
         select count(*) as posted,
                count(f.at) as got_listener,
