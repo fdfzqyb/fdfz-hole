@@ -52,7 +52,7 @@ watch(tab, () => {
 function kindLabel(r) {
   if (r.kind === 'swap_limit') return '換人次數達上限'
   if (r.kind === 'report') return r.by_poster ? '發出者檢舉' : '傾聽者檢舉'
-  if (r.by_poster) return '發出者自己求助'
+  if (r.by_poster) return r.has_listener ? '發出者自己求助' : '發出者求助（還沒有傾聽者接下）'
   return r.leave_reason === 'crisis' ? '傾聽者退出並要求危機協助' : '傾聽者標記需要協助'
 }
 const isUrgent = (r) => r.kind === 'need_help'
@@ -172,7 +172,7 @@ const myId = computed(() => auth.session?.user?.id)
         </div>
         <p v-if="r.note" class="case small"><b>{{ t('留言：') }}</b>{{ r.note }}</p>
         <p v-if="r.leave_reason && r.leave_reason !== 'crisis'" class="muted small">{{ t('傾聽者已退出：{reason}', { reason: t(LEAVE_LABEL[r.leave_reason]) }) }}</p>
-        <p class="muted small">{{ r.conversation_active ? t('對話還在進行。') : t('對話已結束。') }}<template v-if="r.swap_count"> {{ t('這則訊息換過 {n} 次傾聽者。', { n: r.swap_count }) }}</template></p>
+        <p class="muted small">{{ !r.has_listener ? (r.conversation_active ? t('訊息還在等傾聽者接下。') : t('訊息已結束。')) : r.conversation_active ? t('對話還在進行。') : t('對話已結束。') }}<template v-if="r.swap_count"> {{ t('這則訊息換過 {n} 次傾聽者。', { n: r.swap_count }) }}</template></p>
         <p v-if="r.resolved_note" class="small">{{ t('處理說明：{note}', { note: r.resolved_note }) }}</p>
 
         <div v-if="convs[r.id]" class="vstack">
@@ -180,7 +180,7 @@ const myId = computed(() => auth.session?.user?.id)
           <div v-for="(m, i) in convs[r.id].messages" :key="i" class="bub small" :class="m.from">
             {{ m.body }}<time>{{ m.from === 'poster' ? t('發出者') : t('傾聽者') }} · {{ when(m.created_at) }}</time>
           </div>
-          <p v-if="!convs[r.id].messages.length" class="muted small">{{ t('這段對話還沒有訊息。') }}</p>
+          <p v-if="!convs[r.id].messages.length" class="muted small">{{ r.has_listener ? t('這段對話還沒有訊息。') : t('還沒有傾聽者接下，只有發出者寫的原訊息。') }}</p>
         </div>
 
         <dl v-if="revealed[r.id]" class="idbox">
@@ -258,7 +258,7 @@ const myId = computed(() => auth.session?.user?.id)
     <p class="small">{{ t('這次查詢會寫進操作紀錄，所有管理員都看得到誰、何時、為什麼查。') }}</p>
     <div class="chips">
       <button type="button" class="chip" :aria-pressed="revealWho === 'poster'" @click="revealWho = 'poster'">{{ t('發出者') }}</button>
-      <button type="button" class="chip" :aria-pressed="revealWho === 'listener'" @click="revealWho = 'listener'">{{ t('傾聽者') }}</button>
+      <button v-if="revealFor?.has_listener" type="button" class="chip" :aria-pressed="revealWho === 'listener'" @click="revealWho = 'listener'">{{ t('傾聽者') }}</button>
     </div>
     <label class="field">
       <span>{{ t('查詢理由（必填）') }}</span>
@@ -288,7 +288,7 @@ const myId = computed(() => auth.session?.user?.id)
 <style scoped>
 .urgent { outline: 1.5px solid var(--alert); }
 .count { margin-left: 6px; }
-.case { border-left: 3px solid var(--alert); padding-left: 12px; }
+.case { border-left: 3px solid var(--alert); padding-left: 12px; white-space: pre-line; }
 .bub { max-width: 82%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bub.poster { background: var(--mist); align-self: flex-start; }
 .bub.listener { background: var(--leaf-soft); align-self: flex-end; }
