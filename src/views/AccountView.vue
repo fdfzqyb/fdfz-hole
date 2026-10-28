@@ -1,4 +1,5 @@
 <script setup>
+import { VERSION, COMMIT } from '../version.js'
 import { locale, setLocale, t } from '../i18n'
 import { computed } from 'vue'
 import { auth, signOut, listenerState, isHoleAdmin } from '../auth'
@@ -38,6 +39,7 @@ async function logout() {
     <router-link to="/rules" class="btn plain block">{{ t('樹洞守則') }}</router-link>
     <a :href="accountUrl('/')" class="btn plain block">{{ t('帳號設定（改密碼）') }}</a>
     <button class="btn plain block" type="button" @click="logout">{{ t('登出') }}</button>
+    <p class="center muted small">{{ t('FDFZ 樹洞') }} v{{ VERSION }}<template v-if="COMMIT"> · {{ COMMIT }}</template></p>
   </div>
   <TabBar />
 </template>
