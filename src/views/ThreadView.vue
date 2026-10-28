@@ -1,5 +1,5 @@
 <script setup>
-// 發出者看自己的一則訊息：和每位傾聽者各自一對一的對話、換人、多找一位、結束、檢舉
+// 發出者看自己的一則訊息：和每位傾聽者各自一對一的對話、換人、多找一位、評分、結束、檢舉
 import { t } from '../i18n'
 import { ref, computed, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
@@ -20,7 +20,12 @@ const router = useRouter()
 const thread = ref(null)
 const selected = ref(null)
 const error = ref('')
-const notice = ref('')
+// 發訊息時指定再找上次那位：prefer=1 已經先派給他，prefer=0 他現在接不了、照常派
+const PREFER_NOTICE = {
+  1: '已經先派給上次那位傾聽者。對方也可以婉拒，婉拒的話會改派給別人。',
+  0: '上次那位傾聽者現在沒辦法接，已經照常派給其他傾聽者。',
+}
+const notice = ref(PREFER_NOTICE[route.query.prefer] ?? '')
 const showHelp = ref(route.query.help === '1')
 
 async function load() {
@@ -42,6 +47,28 @@ const who = (c) => t('傾聽者 {n}', { n: c.n })
 const isOpen = computed(() => thread.value && !thread.value.closed_at)
 const activeAid = computed(() => (current.value?.active ? current.value.assignment_id : convs.value.find((c) => c.active)?.assignment_id) ?? null)
 const maxSwaps = computed(() => auth.hole.config?.max_swaps ?? 5)
+
+// ChatBox 打開一段對話時已標成已讀，分頁上的未讀數跟著清掉
+function clearUnread() {
+  const c = thread.value?.conversations.find((x) => x.assignment_id === selected.value)
+  if (c) c.unread = 0
+}
+
+// 評分：只用來調整之後的派單，傾聽者看不到；隨時可以改
+const RATINGS = [
+  { value: 3, label: '有幫助' },
+  { value: 2, label: '普通' },
+  { value: 1, label: '沒幫助' },
+]
+const rateBusy = ref(false)
+async function rate(value) {
+  const c = thread.value.conversations.find((x) => x.assignment_id === selected.value)
+  rateBusy.value = true
+  const { error: e } = await supabase.rpc('hole_rate', { aid: c.assignment_id, p_rating: value })
+  rateBusy.value = false
+  if (e) return (notice.value = errorText(e))
+  c.rating = value
+}
 
 // 多找一位
 const extraBusy = ref(false)
@@ -150,7 +177,7 @@ async function report() {
             v-for="c in convs" :key="c.assignment_id" type="button" role="tab"
             :aria-selected="c.assignment_id === selected" :class="{ ended: !c.active }"
             @click="selected = c.assignment_id"
-          ><span class="av">{{ c.n }}</span>{{ who(c) }}</button>
+          ><span class="av">{{ c.n }}</span>{{ who(c) }}<span v-if="c.unread && c.assignment_id !== selected" class="unread">{{ c.unread }}</span></button>
         </div>
         <p class="muted tiny">{{ t('傾聽者也是同學，要上課和休息，回覆可能要等幾小時。') }}</p>
         <ChatBox
@@ -159,7 +186,19 @@ async function report() {
           :start-note="t('{who} 在 {time} 接下了', { who: who(current), time: clock(current.accepted_at) })"
           :placeholder="t('寫給{who}…', { who: who(current) })"
           @help="showHelp = true"
+          @loaded="clearUnread"
         />
+
+        <div v-if="current?.can_rate" class="rate">
+          <span class="small">{{ t('{who} 的回覆對你有幫助嗎？', { who: who(current) }) }}</span>
+          <div class="chips">
+            <button
+              v-for="x in RATINGS" :key="x.value" type="button" class="chip"
+              :aria-pressed="current.rating === x.value" :disabled="rateBusy" @click="rate(x.value)"
+            >{{ t(x.label) }}</button>
+          </div>
+          <span class="muted tiny">{{ t('只用來調整之後的派單，{who} 看不到你的評分。隨時可以改。', { who: who(current) }) }}</span>
+        </div>
 
         <div v-if="current?.can_request_extra" class="note warn">
           <Icon name="clock" :size="20" />
@@ -233,3 +272,7 @@ async function report() {
     </template>
   </Modal>
 </template>
+
+<style scoped>
+.rate { display: flex; flex-direction: column; gap: 8px; border-top: 1px solid var(--border); padding-top: 12px; }
+</style>

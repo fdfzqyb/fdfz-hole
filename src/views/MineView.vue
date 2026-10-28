@@ -16,6 +16,8 @@ onMounted(async () => {
   threads.value = data
 })
 
+// 傾聽者傳來、還沒讀的訊息數
+const unreadOf = (th) => th.conversations.reduce((n, c) => n + (c.unread ?? 0), 0)
 const open = computed(() => (threads.value ?? []).filter((x) => !x.closed_at))
 const closed = computed(() => (threads.value ?? []).filter((x) => x.closed_at))
 </script>
@@ -34,7 +36,10 @@ const closed = computed(() => (threads.value ?? []).filter((x) => x.closed_at))
       <router-link v-for="th in open" :key="th.id" :to="`/mine/${th.id}`" class="card thread-card">
         <div class="row">
           <span class="muted small">{{ t(TOPIC_LABEL[th.topic]) }} · {{ when(th.created_at) }}</span>
-          <span class="status" :class="threadStatus(th).cls">{{ t(threadStatus(th).label, threadStatus(th)) }}</span>
+          <span class="hstack" style="gap: 6px">
+            <span v-if="unreadOf(th)" class="status st-alert">{{ t('{n} 則新回覆', { n: unreadOf(th) }) }}</span>
+            <span class="status" :class="threadStatus(th).cls">{{ t(threadStatus(th).label, threadStatus(th)) }}</span>
+          </span>
         </div>
         <h3>{{ th.body }}</h3>
       </router-link>
@@ -44,7 +49,10 @@ const closed = computed(() => (threads.value ?? []).filter((x) => x.closed_at))
         <router-link v-for="th in closed" :key="th.id" :to="`/mine/${th.id}`" class="card thread-card">
           <div class="row">
             <span class="muted small">{{ t(TOPIC_LABEL[th.topic]) }} · {{ when(th.created_at) }}</span>
-            <span class="status st-done">{{ t('已結束') }}</span>
+            <span class="hstack" style="gap: 6px">
+              <span v-if="unreadOf(th)" class="status st-alert">{{ t('{n} 則新回覆', { n: unreadOf(th) }) }}</span>
+              <span class="status st-done">{{ t('已結束') }}</span>
+            </span>
           </div>
           <h3>{{ th.body }}</h3>
         </router-link>

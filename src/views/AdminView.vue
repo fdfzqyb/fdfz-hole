@@ -116,6 +116,9 @@ async function act() {
   load()
 }
 
+// 評分只給管理員參考，不會自動暫停資格；「沒幫助」至少 3 次且多於「有幫助」時提醒
+const lowRated = (l) => l.rated_unhelpful >= 3 && l.rated_unhelpful > l.rated_helpful
+
 async function restore(l) {
   const { error: e } = await supabase.rpc('hole_admin_restore_listener', { uid: l.user_id, reason: null })
   if (e) return (error.value = errorText(e))
@@ -213,6 +216,9 @@ const myId = computed(() => auth.session?.user?.id)
           <span v-else class="status st-wait">{{ t('還沒勾選承諾') }}</span>
         </div>
         <p class="muted small">{{ t('測驗通過：{time}', { time: when(l.quiz_passed_at) }) }}<template v-if="l.pledged_at"> · {{ t('承諾：{time}', { time: when(l.pledged_at) }) }}</template> · {{ t('逾時 {n} 次', { n: l.timeout_count }) }}</p>
+        <p v-if="l.rated_helpful + l.rated_okay + l.rated_unhelpful" class="small" :class="{ alert: lowRated(l) }">
+          {{ t('發出者評分：有幫助 {a}、普通 {b}、沒幫助 {c}', { a: l.rated_helpful, b: l.rated_okay, c: l.rated_unhelpful }) }}<template v-if="lowRated(l)"> · {{ t('「沒幫助」偏多，可以留意') }}</template>
+        </p>
         <template v-if="l.suspended_at">
           <p class="small">{{ t('暫停原因：{reason}', { reason: l.suspend_reason || t('未註明') }) }}</p>
           <button class="btn plain small" type="button" style="align-self: flex-start" @click="restore(l)">{{ t('恢復資格') }}</button>
@@ -288,6 +294,7 @@ const myId = computed(() => auth.session?.user?.id)
 <style scoped>
 .urgent { outline: 1.5px solid var(--alert); }
 .count { margin-left: 6px; }
+p.alert { color: var(--alert); font-weight: 600; }
 .case { border-left: 3px solid var(--alert); padding-left: 12px; white-space: pre-line; }
 .bub { max-width: 82%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bub.poster { background: var(--mist); align-self: flex-start; }
