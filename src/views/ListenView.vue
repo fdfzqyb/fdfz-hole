@@ -140,7 +140,7 @@ async function decline(a) {
         </div>
         <p class="excerpt">{{ lastMsg[a.assignment_id]?.body ?? a.body }}</p>
       </router-link>
-      <p class="muted tiny">{{ t('對方等了 12 小時沒收到回覆，系統會寄信提醒你；等滿 24 小時，對方可以選擇多找一位傾聽者，這時會記你一次逾時。') }}</p>
+      <p class="muted tiny">{{ t('對方等了 25 小時沒收到回覆，系統會寄信提醒你；等滿 50 小時，對方可以選擇多找一位傾聽者，這時會記你一次逾時。') }}</p>
     </template>
 
     <template v-if="state === 'qualified'">
