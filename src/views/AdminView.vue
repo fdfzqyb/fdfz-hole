@@ -1,6 +1,7 @@
 <script setup>
 // 樹洞管理：只看得到被檢舉、被標記「需要協助」或發出者自己求助的對話。
-// 看對話、查身份、暫停資格、標記處理，每一步都寫進 hole_audit_log，所有管理員都看得到
+// 看對話、查身份、暫停資格、標記處理、增刪危機關鍵詞，每一步都寫進 hole_audit_log，所有管理員都看得到。
+// 統計只有次數和時間，不含任何內容或身份
 import { t } from '../i18n'
 import { ref, computed, watch } from 'vue'
 import { supabase } from '../supabase'
@@ -15,6 +16,8 @@ const TABS = [
   { key: 'open', label: '未處理' },
   { key: 'resolved', label: '已處理' },
   { key: 'listeners', label: '傾聽者' },
+  { key: 'stats', label: '統計' },
+  { key: 'words', label: '關鍵詞' },
   { key: 'log', label: '操作紀錄' },
   { key: 'admins', label: '管理員' },
 ]
@@ -23,6 +26,8 @@ const reports = ref(null)
 const openCount = ref(0)
 const listeners = ref(null)
 const log = ref(null)
+const stats = ref(null)
+const words = ref(null)
 const error = ref('')
 const notice = ref('')
 
@@ -42,6 +47,14 @@ async function load() {
     const { data, error: e } = await supabase.from('hole_audit_log').select('*').order('created_at', { ascending: false }).limit(100)
     if (e) return (error.value = errorText(e))
     log.value = data
+  } else if (tab.value === 'stats') {
+    const { data, error: e } = await supabase.rpc('hole_admin_stats', { p_weeks: 8 })
+    if (e) return (error.value = errorText(e))
+    stats.value = data
+  } else if (tab.value === 'words') {
+    const { data, error: e } = await supabase.from('hole_crisis_words').select('word').order('word')
+    if (e) return (error.value = errorText(e))
+    words.value = data.map((x) => x.word)
   }
 }
 watch(tab, () => {
@@ -140,6 +153,49 @@ async function changeAdmin(add) {
   sid.value = ''
 }
 
+// 統計：分鐘數換成好讀的長度
+function minutes(m) {
+  if (m == null) return '—'
+  if (m < 60) return t('{n} 分鐘', { n: m })
+  if (m < 48 * 60) return t('{n} 小時', { n: Math.round(m / 6) / 10 })
+  return t('{n} 天', { n: Math.round(m / 144) / 10 })
+}
+function weekLabel(start) {
+  const d = new Date(start + 'T00:00:00')
+  const e = new Date(d.getTime() + 6 * 86400000)
+  return `${d.getMonth() + 1}/${d.getDate()}–${e.getMonth() + 1}/${e.getDate()}`
+}
+
+// 危機關鍵詞：訊息裡出現任何一個詞，發出者就會看到心理老師和求助熱線
+const newWord = ref('')
+const wordBusy = ref(false)
+const removing = ref(null)
+async function addWord() {
+  const w = newWord.value.trim()
+  if (!w) return
+  wordBusy.value = true
+  error.value = ''
+  notice.value = ''
+  const { error: e } = await supabase.rpc('hole_admin_add_crisis_word', { p_word: w })
+  wordBusy.value = false
+  if (e) return (error.value = errorText(e))
+  notice.value = t('已新增「{w}」。', { w })
+  newWord.value = ''
+  load()
+}
+async function removeWord() {
+  const w = removing.value
+  wordBusy.value = true
+  error.value = ''
+  notice.value = ''
+  const { error: e } = await supabase.rpc('hole_admin_remove_crisis_word', { p_word: w })
+  wordBusy.value = false
+  removing.value = null
+  if (e) return (error.value = errorText(e))
+  notice.value = t('已移除「{w}」。', { w })
+  load()
+}
+
 const ACTION_LABEL = {
   view_conversation: '查看對話',
   reveal_identity: '查詢身份',
@@ -148,6 +204,8 @@ const ACTION_LABEL = {
   restore_listener: '恢復傾聽者',
   add_admin: '新增管理員',
   remove_admin: '移除管理員',
+  add_crisis_word: '新增危機關鍵詞',
+  remove_crisis_word: '移除危機關鍵詞',
 }
 const myId = computed(() => auth.session?.user?.id)
 </script>
@@ -226,6 +284,55 @@ const myId = computed(() => auth.session?.user?.id)
       </div>
     </template>
 
+    <!-- 統計 -->
+    <template v-if="tab === 'stats'">
+      <p class="note"><Icon name="lock" :size="20" /><span>{{ t('只有次數和時間，不含任何訊息內容或身份。週一開始算。') }}</span></p>
+      <p v-if="!stats" class="muted center">{{ t('載入中…') }}</p>
+      <template v-else>
+        <div class="card">
+          <h3>{{ t('現在') }}</h3>
+          <div class="stats">
+            <div><b>{{ stats.listeners_available }}</b><span>{{ t('可接單的傾聽者') }}</span></div>
+            <div><b>{{ stats.threads_open }}</b><span>{{ t('進行中的訊息') }}</span></div>
+            <div><b :class="{ alert: stats.threads_waiting }">{{ stats.threads_waiting }}</b><span>{{ t('還沒有人接下') }}</span></div>
+          </div>
+          <p class="muted small">{{ t('通過測驗、承諾是最新版、沒被暫停的傾聽者共 {n} 位。', { n: stats.listeners_qualified }) }}</p>
+        </div>
+        <div v-for="(w, i) in stats.weeks" :key="w.week_start" class="card">
+          <div class="row">
+            <h3>{{ weekLabel(w.week_start) }}</h3>
+            <span v-if="i === 0" class="muted small">{{ t('本週（到目前為止）') }}</span>
+          </div>
+          <dl class="wk small">
+            <dt>{{ t('新訊息') }}</dt><dd>{{ w.posted }}<template v-if="w.posted"> · {{ t('{n} 則有人接下', { n: w.got_listener }) }}</template></dd>
+            <dt>{{ t('多久有人接') }}</dt><dd>{{ w.wait_median_min == null ? '—' : t('一半在 {a} 內，平均 {b}', { a: minutes(w.wait_median_min), b: minutes(w.wait_avg_min) }) }}</dd>
+            <dt>{{ t('接下後第一次回覆') }}</dt><dd>{{ w.first_reply_avg_min == null ? '—' : t('平均 {a}', { a: minutes(w.first_reply_avg_min) }) }}</dd>
+            <dt>{{ t('對話則數') }}</dt><dd>{{ t('發出者 {a}、傾聽者 {b}', { a: w.messages_poster, b: w.messages_listener }) }}</dd>
+            <dt>{{ t('婉拒／沒接') }}</dt><dd>{{ t('婉拒 {a}、30 分鐘沒接 {b}', { a: w.declined, b: w.not_accepted }) }}</dd>
+            <dt>{{ t('等回覆') }}</dt><dd :class="{ alert: w.late }">{{ t('25 小時提醒 {a}、50 小時逾時 {b}', { a: w.reminded, b: w.late }) }}</dd>
+            <dt>{{ t('求助／檢舉') }}</dt><dd :class="{ alert: w.need_help }">{{ t('需要協助 {a}、檢舉 {b}', { a: w.need_help, b: w.reports }) }}</dd>
+          </dl>
+        </div>
+      </template>
+    </template>
+
+    <!-- 危機關鍵詞 -->
+    <template v-if="tab === 'words'">
+      <div class="card">
+        <h3>{{ t('危機關鍵詞') }}</h3>
+        <p class="muted small">{{ t('發出者的訊息裡出現任何一個詞，就會看到心理老師和求助熱線。系統只比對字面，簡體和繁體要分別加；增刪都會寫進操作紀錄。') }}</p>
+        <form class="addword" @submit.prevent="addWord">
+          <input v-model="newWord" type="text" maxlength="20" :placeholder="t('例如：撐不下去')" :aria-label="t('新增關鍵詞')" />
+          <button class="btn" type="submit" :disabled="wordBusy || !newWord.trim()">{{ t('新增') }}</button>
+        </form>
+        <p v-if="!words" class="muted small">{{ t('載入中…') }}</p>
+        <p v-else-if="!words.length" class="empty">{{ t('名單是空的，目前不會顯示任何求助提示。') }}</p>
+        <div v-else class="chips">
+          <button v-for="w in words" :key="w" type="button" class="chip" :aria-label="t('移除「{w}」', { w })" @click="removing = w">{{ w }}<Icon name="close" :size="16" /></button>
+        </div>
+      </div>
+    </template>
+
     <!-- 操作紀錄 -->
     <template v-if="tab === 'log'">
       <p class="note"><Icon name="lock" :size="20" /><span>{{ t('所有樹洞管理員都看得到這份紀錄：誰、何時、為什麼查看對話或身份。') }}</span></p>
@@ -277,6 +384,14 @@ const myId = computed(() => auth.session?.user?.id)
     </div>
   </Modal>
 
+  <Modal :open="!!removing" :title="t('移除這個關鍵詞？')" @update:open="removing = null">
+    <p class="small">{{ t('移除「{w}」後，訊息裡出現這個詞就不會再顯示求助提示。這次操作會寫進操作紀錄。', { w: removing }) }}</p>
+    <div class="actions end">
+      <button class="btn plain" type="button" @click="removing = null">{{ t('取消') }}</button>
+      <button class="btn danger" type="button" :disabled="wordBusy" @click="removeWord">{{ t('移除') }}</button>
+    </div>
+  </Modal>
+
   <Modal :open="!!actFor" :title="actFor?.kind === 'suspend' ? t('暫停這位傾聽者？') : t('標記已處理')" @update:open="actFor = null">
     <p v-if="actFor?.kind === 'suspend'" class="small">{{ t('他手上所有進行中的對話會轉給別人，之後不會再派單給他，直到有管理員恢復資格。') }}</p>
     <label class="field">
@@ -294,7 +409,12 @@ const myId = computed(() => auth.session?.user?.id)
 <style scoped>
 .urgent { outline: 1.5px solid var(--alert); }
 .count { margin-left: 6px; }
-p.alert { color: var(--alert); font-weight: 600; }
+p.alert, dd.alert, b.alert { color: var(--alert); font-weight: 600; }
+.wk { display: grid; grid-template-columns: auto 1fr; gap: 6px 14px; margin: 0; }
+.wk dt { color: var(--muted); }
+.wk dd { margin: 0; font-variant-numeric: tabular-nums; }
+.addword { display: flex; gap: 8px; }
+.addword input { flex: 1; min-width: 0; }
 .case { border-left: 3px solid var(--alert); padding-left: 12px; white-space: pre-line; }
 .bub { max-width: 82%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bub.poster { background: var(--mist); align-self: flex-start; }
