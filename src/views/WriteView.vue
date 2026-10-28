@@ -19,6 +19,9 @@ const error = ref('')
 const words = ref([])
 const activeAid = ref(null)
 const activeTid = ref(null)
+// 再找上次那位：之前回覆過你、你沒換掉的傾聽者（一段對話一個選項，對方仍然匿名）
+const pastListeners = ref([])
+const prefer = ref('')
 
 onMounted(async () => {
   // 危機字詞只做溫和提示：不擋送出、不通知任何人
@@ -33,7 +36,15 @@ onMounted(async () => {
   const conv = threads.flatMap((x) => x.conversations).find((c) => c.active)
   activeAid.value = conv?.assignment_id ?? null
   activeTid.value = threads.find((x) => !x.closed_at)?.id ?? null
+  pastListeners.value = threads.flatMap((th) => th.conversations
+    .map((c, i) => ({ ...c, n: i + 1 }))
+    .filter((c) => c.can_request_again)
+    .map((c) => ({ aid: c.assignment_id, n: c.n, body: th.body })))
 })
+const preferOptions = computed(() => pastListeners.value.map((x) => ({
+  aid: x.aid,
+  label: t('「{text}」的傾聽者 {n}', { text: x.body.length > 10 ? x.body.slice(0, 10) + '…' : x.body, n: x.n }),
+})))
 const mentionsCrisis = computed(() => words.value.some((w) => body.value.includes(w)))
 
 async function submit() {
@@ -45,10 +56,14 @@ async function submit() {
     p_topic: topic.value,
     p_body: body.value.trim(),
     p_avoid_classmates: avoidClassmates.value,
+    p_prefer: prefer.value ? Number(prefer.value) : null,
   })
   busy.value = false
   if (e) return (error.value = errorText(e))
-  router.push({ path: `/mine/${data.thread_id}`, query: data.show_help ? { help: 1 } : {} })
+  const query = {}
+  if (data.show_help) query.help = 1
+  if (data.preferred != null) query.prefer = data.preferred ? 1 : 0
+  router.push({ path: `/mine/${data.thread_id}`, query })
 }
 </script>
 
@@ -84,6 +99,14 @@ async function submit() {
       <label class="check">
         <input v-model="avoidClassmates" type="checkbox" />
         <span>{{ t('不要派給同班的同學') }}<small>{{ t('學號前六位和你相同的人不會收到。') }}</small></span>
+      </label>
+      <label v-if="preferOptions.length" class="field">
+        <span>{{ t('想再找之前聊過的傾聽者？（選填）') }}</span>
+        <select v-model="prefer">
+          <option value="">{{ t('不指定，隨機派') }}</option>
+          <option v-for="x in preferOptions" :key="x.aid" :value="String(x.aid)">{{ x.label }}</option>
+        </select>
+        <small>{{ t('會先派給那位，對方仍然看不到你是誰，也可以婉拒；婉拒或暫停接單時改成隨機派。') }}</small>
       </label>
       <p v-if="error" class="error">{{ t(error) }}</p>
       <button class="btn block" :disabled="busy"><Icon name="send" />{{ busy ? t('送出中…') : t('送出') }}</button>

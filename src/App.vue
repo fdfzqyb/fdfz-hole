@@ -2,12 +2,17 @@
 import { watch } from 'vue'
 import { locale, t } from './i18n'
 import { auth } from './auth'
+import { unread } from './unread'
 
 const reload = () => window.location.reload()
 
 watch(locale, (value) => {
   document.documentElement.lang = value
-  document.title = t('FDFZ 樹洞')
+}, { immediate: true })
+
+// 有未讀訊息或等著接下的單時，分頁標題前面加上 (n)
+watch(() => [locale.value, unread.mine + unread.listen + unread.offers], ([, n]) => {
+  document.title = (n ? `(${n}) ` : '') + t('FDFZ 樹洞')
 }, { immediate: true })
 </script>
 

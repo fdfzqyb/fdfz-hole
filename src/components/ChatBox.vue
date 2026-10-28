@@ -1,10 +1,12 @@
 <script setup>
 // 一段一對一對話：原訊息、（換人時帶過來的）之前的對話、訊息列表和輸入框。
-// 新訊息用 Realtime 收；hole_messages 只有 assignment_id 和 from_poster，沒有 user id
+// 新訊息用 Realtime 收；hole_messages 只有 assignment_id 和 from_poster，沒有 user id。
+// 打開就把這段標成已讀，導覽列的未讀數字跟著更新
 import { t } from '../i18n'
 import { ref, computed, watch, onUnmounted, nextTick } from 'vue'
 import { supabase } from '../supabase'
 import { when, errorText } from '../format'
+import { markRead } from '../unread'
 import Icon from './Icon.vue'
 
 const props = defineProps({
@@ -33,6 +35,12 @@ async function load() {
   messages.value = data.messages
   emit('loaded', data)
   scrollDown()
+  seen()
+}
+
+// 畫面上看得到的訊息就算讀過（分頁在背景時不算，切回來 onVisible 會重讀）
+function seen() {
+  if (document.visibilityState === 'visible') markRead(props.aid)
 }
 
 function scrollDown() {
@@ -47,6 +55,7 @@ function subscribe() {
       if (messages.value.some((x) => x.id === m.id)) return
       messages.value.push({ id: m.id, from: m.from_poster === amPoster.value ? 'me' : 'other', body: m.body, created_at: m.created_at })
       scrollDown()
+      if (m.from_poster !== amPoster.value) seen()
     })
     .subscribe()
 }

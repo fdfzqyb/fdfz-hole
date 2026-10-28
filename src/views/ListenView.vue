@@ -120,6 +120,7 @@ async function decline(a) {
             <span class="status st-live">{{ t(TOPIC_LABEL[a.topic]) }}</span>
             <span class="muted small"><Icon name="clock" :size="16" /> {{ ago(a.offered_at) }}</span>
           </div>
+          <p v-if="a.requested" class="note"><Icon name="ear" :size="20" /><span>{{ t('這位同學之前和你聊過，這次指定想找你。你一樣看不到對方是誰，也可以婉拒。') }}</span></p>
           <div class="veil"><Icon name="lock" :size="20" />{{ t('按「接下」後才看得到內容') }}</div>
           <div class="actions">
             <button class="btn" type="button" style="flex: 1" :disabled="busy" @click="accept(a)">{{ t('接下') }}</button>
@@ -135,7 +136,8 @@ async function decline(a) {
       <router-link v-for="a in active" :key="a.assignment_id" :to="`/listen/${a.assignment_id}`" class="card thread-card">
         <div class="row">
           <span class="muted small">{{ t(TOPIC_LABEL[a.topic]) }} · {{ lastMsg[a.assignment_id] ? ago(lastMsg[a.assignment_id].created_at) : t('{time}接下', { time: ago(a.accepted_at) }) }}</span>
-          <span v-if="lastMsg[a.assignment_id]?.from === 'me'" class="status st-wait">{{ t('等對方') }}</span>
+          <span v-if="a.unread" class="status st-alert">{{ t('{n} 則新訊息', { n: a.unread }) }}</span>
+          <span v-else-if="lastMsg[a.assignment_id]?.from === 'me'" class="status st-wait">{{ t('等對方') }}</span>
           <span v-else class="status st-alert">{{ t('等你回覆') }}</span>
         </div>
         <p class="excerpt">{{ lastMsg[a.assignment_id]?.body ?? a.body }}</p>
