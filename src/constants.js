@@ -26,4 +26,4 @@ export const PLEDGE = [
 ]
 
 // 快速離開跳去的中性網頁
-export const EXIT_URL = 'https://www.baidu.com/'
+export const EXIT_URL = 'https://www.bing.com/'
