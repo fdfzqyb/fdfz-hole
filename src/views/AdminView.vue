@@ -28,6 +28,7 @@ const listeners = ref(null)
 const log = ref(null)
 const stats = ref(null)
 const words = ref(null)
+const exceptions = ref(null)
 const error = ref('')
 const notice = ref('')
 
@@ -52,9 +53,14 @@ async function load() {
     if (e) return (error.value = errorText(e))
     stats.value = data
   } else if (tab.value === 'words') {
-    const { data, error: e } = await supabase.from('hole_crisis_words').select('word').order('word')
-    if (e) return (error.value = errorText(e))
-    words.value = data.map((x) => x.word)
+    const [w, ex] = await Promise.all([
+      supabase.from('hole_crisis_words').select('word').order('word'),
+      supabase.from('hole_crisis_exceptions').select('word').order('word'),
+    ])
+    if (w.error) return (error.value = errorText(w.error))
+    if (ex.error) return (error.value = errorText(ex.error))
+    words.value = w.data.map((x) => x.word)
+    exceptions.value = ex.data.map((x) => x.word)
   }
 }
 watch(tab, () => {
@@ -167,28 +173,35 @@ function weekLabel(start) {
 }
 
 // 危機關鍵詞：訊息裡出現任何一個詞，發出者就會看到心理老師和求助熱線
+// 例外詞：比對前先拿掉，例如「跳樓價」「想死記」，避免日常用語跳出求助提示
 const newWord = ref('')
+const newException = ref('')
 const wordBusy = ref(false)
-const removing = ref(null)
-async function addWord() {
-  const w = newWord.value.trim()
+const removing = ref(null) // { kind: 'word' | 'exception', w }
+const WORD_RPC = {
+  word: { add: 'hole_admin_add_crisis_word', remove: 'hole_admin_remove_crisis_word' },
+  exception: { add: 'hole_admin_add_crisis_exception', remove: 'hole_admin_remove_crisis_exception' },
+}
+async function addWord(kind) {
+  const input = kind === 'word' ? newWord : newException
+  const w = input.value.trim()
   if (!w) return
   wordBusy.value = true
   error.value = ''
   notice.value = ''
-  const { error: e } = await supabase.rpc('hole_admin_add_crisis_word', { p_word: w })
+  const { error: e } = await supabase.rpc(WORD_RPC[kind].add, { p_word: w })
   wordBusy.value = false
   if (e) return (error.value = errorText(e))
   notice.value = t('已新增「{w}」。', { w })
-  newWord.value = ''
+  input.value = ''
   load()
 }
 async function removeWord() {
-  const w = removing.value
+  const { kind, w } = removing.value
   wordBusy.value = true
   error.value = ''
   notice.value = ''
-  const { error: e } = await supabase.rpc('hole_admin_remove_crisis_word', { p_word: w })
+  const { error: e } = await supabase.rpc(WORD_RPC[kind].remove, { p_word: w })
   wordBusy.value = false
   removing.value = null
   if (e) return (error.value = errorText(e))
@@ -206,6 +219,8 @@ const ACTION_LABEL = {
   remove_admin: '移除管理員',
   add_crisis_word: '新增危機關鍵詞',
   remove_crisis_word: '移除危機關鍵詞',
+  add_crisis_exception: '新增危機例外詞',
+  remove_crisis_exception: '移除危機例外詞',
 }
 const myId = computed(() => auth.session?.user?.id)
 </script>
@@ -321,14 +336,27 @@ const myId = computed(() => auth.session?.user?.id)
       <div class="card">
         <h3>{{ t('危機關鍵詞') }}</h3>
         <p class="muted small">{{ t('發出者的訊息裡出現任何一個詞，就會看到心理老師和求助熱線。系統只比對字面，簡體和繁體要分別加；增刪都會寫進操作紀錄。') }}</p>
-        <form class="addword" @submit.prevent="addWord">
+        <form class="addword" @submit.prevent="addWord('word')">
           <input v-model="newWord" type="text" maxlength="20" :placeholder="t('例如：撐不下去')" :aria-label="t('新增關鍵詞')" />
           <button class="btn" type="submit" :disabled="wordBusy || !newWord.trim()">{{ t('新增') }}</button>
         </form>
         <p v-if="!words" class="muted small">{{ t('載入中…') }}</p>
         <p v-else-if="!words.length" class="empty">{{ t('名單是空的，目前不會顯示任何求助提示。') }}</p>
         <div v-else class="chips">
-          <button v-for="w in words" :key="w" type="button" class="chip" :aria-label="t('移除「{w}」', { w })" @click="removing = w">{{ w }}<Icon name="close" :size="16" /></button>
+          <button v-for="w in words" :key="w" type="button" class="chip" :aria-label="t('移除「{w}」', { w })" @click="removing = { kind: 'word', w }">{{ w }}<Icon name="close" :size="16" /></button>
+        </div>
+      </div>
+      <div class="card">
+        <h3>{{ t('例外詞') }}</h3>
+        <p class="muted small">{{ t('含有關鍵詞、但其實是日常用語的詞，例如「跳樓價」「想死記」。比對前會先拿掉例外詞，剩下的字再找關鍵詞。例外詞要包含某個關鍵詞，不能和關鍵詞一模一樣。') }}</p>
+        <form class="addword" @submit.prevent="addWord('exception')">
+          <input v-model="newException" type="text" maxlength="20" :placeholder="t('例如：跳樓價')" :aria-label="t('新增例外詞')" />
+          <button class="btn" type="submit" :disabled="wordBusy || !newException.trim()">{{ t('新增') }}</button>
+        </form>
+        <p v-if="!exceptions" class="muted small">{{ t('載入中…') }}</p>
+        <p v-else-if="!exceptions.length" class="empty">{{ t('還沒有例外詞。') }}</p>
+        <div v-else class="chips">
+          <button v-for="w in exceptions" :key="w" type="button" class="chip" :aria-label="t('移除「{w}」', { w })" @click="removing = { kind: 'exception', w }">{{ w }}<Icon name="close" :size="16" /></button>
         </div>
       </div>
     </template>
@@ -384,8 +412,10 @@ const myId = computed(() => auth.session?.user?.id)
     </div>
   </Modal>
 
-  <Modal :open="!!removing" :title="t('移除這個關鍵詞？')" @update:open="removing = null">
-    <p class="small">{{ t('移除「{w}」後，訊息裡出現這個詞就不會再顯示求助提示。這次操作會寫進操作紀錄。', { w: removing }) }}</p>
+  <Modal :open="!!removing" :title="removing?.kind === 'exception' ? t('移除這個例外詞？') : t('移除這個關鍵詞？')" @update:open="removing = null">
+    <p class="small">{{ removing?.kind === 'exception'
+      ? t('移除「{w}」後，訊息裡出現這個詞也會顯示求助提示。這次操作會寫進操作紀錄。', { w: removing?.w })
+      : t('移除「{w}」後，訊息裡出現這個詞就不會再顯示求助提示。這次操作會寫進操作紀錄。', { w: removing?.w }) }}</p>
     <div class="actions end">
       <button class="btn plain" type="button" @click="removing = null">{{ t('取消') }}</button>
       <button class="btn danger" type="button" :disabled="wordBusy" @click="removeWord">{{ t('移除') }}</button>
