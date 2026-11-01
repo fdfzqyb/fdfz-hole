@@ -7,6 +7,7 @@ import { supabase } from '../supabase'
 import { TOPIC_LABEL, LEAVE_REASONS } from '../constants'
 import { clock, errorText } from '../format'
 import Icon from '../components/Icon.vue'
+import QuickExit from '../components/QuickExit.vue'
 import Modal from '../components/Modal.vue'
 import ChatBox from '../components/ChatBox.vue'
 import TabBar from '../components/TabBar.vue'
@@ -77,6 +78,7 @@ async function report() {
     <button class="back" type="button" :aria-label="t('返回')" @click="router.push('/listen')"><Icon name="back" :size="24" /></button>
     <h1>{{ t('匿名同學') }}</h1>
     <span v-if="conv" class="status st-live">{{ t(TOPIC_LABEL[conv.topic]) }}</span>
+    <QuickExit />
   </header>
   <div class="page">
     <p v-if="notice" class="note" role="status"><Icon name="check" :size="20" /><span>{{ t(notice) }}</span></p>

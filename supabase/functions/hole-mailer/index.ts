@@ -1,11 +1,14 @@
 // FDFZ 树洞 寄信：每 5 分钟由 pg_cron 叫一次，把 hole_email_outbox 里待寄的通知用 Resend 寄出。
 // 信里只说「有事要处理」和网址，绝不放消息内容或话题。
-// 需要的 Secrets：RESEND_API_KEY（必填）、MAIL_FROM（选填，寄件人）。
+// 需要的 Secrets：RESEND_API_KEY（必填）、MAIL_FROM（选填，寄件人）、MAIL_FROM_NEUTRAL（选填，给发出者的中性寄件人）。
+// 给发出者的「有人回复」信（poster_reply）刻意不提树洞：主旨、寄件人、内文都写成一般通知，避免被旁人看出在用树洞。
 // SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY 由 Supabase 自动提供。
 
 const SITE = 'https://hole.fdfz.click'
 
-const MAILS: Record<string, { subject: string; path: string; lines: string[] }> = {
+type Mail = { subject: string; path: string; lines: string[]; neutral?: boolean }
+
+const MAILS: Record<string, Mail> = {
   new_offer: {
     subject: '树洞：有一则新消息派给你',
     path: '/listen',
@@ -32,6 +35,12 @@ const MAILS: Record<string, { subject: string; path: string; lines: string[] }> 
       '请尽快登录树洞，到「管理」页查看。',
     ],
   },
+  poster_reply: {
+    subject: 'FDFZ：你有一则新通知',
+    path: '/mine',
+    neutral: true,
+    lines: ['你有一则新通知，登录后可以查看。'],
+  },
 }
 
 const env = (name: string) => Deno.env.get(name) ?? ''
@@ -52,22 +61,28 @@ async function rpc(name: string, body: unknown) {
 function render(kind: string) {
   const m = MAILS[kind]
   const url = SITE + m.path
-  const foot = '这封信由 FDFZ 树洞自动寄出，不用回复。'
+  const foot = m.neutral
+    ? '这封信由 FDFZ 自动寄出，不用回复。不想再收到，可以在账号页关掉通知。'
+    : '这封信由 FDFZ 树洞自动寄出，不用回复。'
+  const button = m.neutral ? '打开查看' : '打开树洞'
   const text = [...m.lines, '', url, '', foot].join('\n')
   const html = `<div style="font-family:sans-serif;font-size:15px;line-height:1.7;color:#1f2a24;max-width:520px">
 ${m.lines.map((l) => `<p>${escape(l)}</p>`).join('\n')}
-<p><a href="${url}" style="display:inline-block;background:#2f5d4a;color:#fff;padding:10px 20px;border-radius:999px;text-decoration:none">打开树洞</a></p>
+<p><a href="${url}" style="display:inline-block;background:#2f5d4a;color:#fff;padding:10px 20px;border-radius:999px;text-decoration:none">${escape(button)}</a></p>
 <p style="color:#6b7670;font-size:13px">${escape(foot)}</p>
 </div>`
-  return { subject: m.subject, text, html }
+  return { subject: m.subject, text, html, neutral: !!m.neutral }
 }
 
 async function send(to: string, kind: string) {
-  const { subject, text, html } = render(kind)
+  const { subject, text, html, neutral } = render(kind)
+  const from = neutral
+    ? env('MAIL_FROM_NEUTRAL') || 'FDFZ <notice@fdfz.click>'
+    : env('MAIL_FROM') || 'FDFZ 树洞 <hole@fdfz.click>'
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${env('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },
-    body: JSON.stringify({ from: env('MAIL_FROM') || 'FDFZ 树洞 <hole@fdfz.click>', to: [to], subject, text, html }),
+    body: JSON.stringify({ from, to: [to], subject, text, html }),
   })
   if (!res.ok) throw Object.assign(new Error(`resend: ${res.status} ${await res.text()}`), { status: res.status })
 }

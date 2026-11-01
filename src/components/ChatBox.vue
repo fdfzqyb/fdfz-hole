@@ -8,6 +8,7 @@ import { supabase } from '../supabase'
 import { when, errorText } from '../format'
 import { markRead } from '../unread'
 import Icon from './Icon.vue'
+import IdentityNote from './IdentityNote.vue'
 
 const props = defineProps({
   aid: { type: Number, required: true },
@@ -125,6 +126,7 @@ function onKey(e) {
 
     <p v-if="error" class="error">{{ t(error) }}</p>
 
+    <IdentityNote v-if="conv?.active" :text="draft" />
     <form v-if="conv?.active" class="composer" @submit.prevent="send">
       <label :for="`reply-${aid}`" class="sr">{{ t('回覆') }}</label>
       <textarea :id="`reply-${aid}`" v-model="draft" maxlength="2000" :placeholder="placeholder" @keydown="onKey" />

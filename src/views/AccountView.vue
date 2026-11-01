@@ -1,7 +1,9 @@
 <script setup>
 import { VERSION, COMMIT } from '../version.js'
 import { locale, setLocale, t } from '../i18n'
-import { computed } from 'vue'
+import { computed, ref, onMounted } from 'vue'
+import { supabase } from '../supabase'
+import { errorText } from '../format'
 import { auth, signOut, listenerState, isHoleAdmin } from '../auth'
 import { accountUrl } from '../fdfz'
 import TabBar from '../components/TabBar.vue'
@@ -9,6 +11,25 @@ import TabBar from '../components/TabBar.vue'
 const profile = computed(() => auth.profile ?? {})
 const email = computed(() => auth.session?.user?.email ?? '')
 const LISTENER_LABEL = { none: '還不是傾聽者', pledge: '要重新確認承諾', suspended: '已暫停', qualified: '傾聽者' }
+
+// 有人回我時寄信：預設關閉。信裡不提樹洞、不放內容，同一個人一小時最多一封
+const notifyReply = ref(false)
+const notifyBusy = ref(true)
+const notifyError = ref('')
+onMounted(async () => {
+  const { data } = await supabase.from('hole_user_prefs').select('notify_reply').maybeSingle()
+  notifyReply.value = !!data?.notify_reply
+  notifyBusy.value = false
+})
+async function toggleNotify() {
+  const on = !notifyReply.value
+  notifyBusy.value = true
+  notifyError.value = ''
+  const { error: e } = await supabase.rpc('hole_set_notify_reply', { p_on: on })
+  notifyBusy.value = false
+  if (e) return (notifyError.value = errorText(e))
+  notifyReply.value = on
+}
 
 async function logout() {
   await signOut()
@@ -34,6 +55,16 @@ async function logout() {
         <button type="button" class="btn" :class="{ ghost: locale !== 'zh-Hans' }" :aria-pressed="locale === 'zh-Hans'" lang="zh-Hans" @click="setLocale('zh-Hans')">简体中文</button>
         <button type="button" class="btn" :class="{ ghost: locale !== 'zh-Hant' }" :aria-pressed="locale === 'zh-Hant'" lang="zh-Hant" @click="setLocale('zh-Hant')">繁體中文</button>
       </div>
+    </section>
+
+    <section class="card" aria-labelledby="notify-heading">
+      <h3 id="notify-heading">{{ t('通知') }}</h3>
+      <label class="check">
+        <input type="checkbox" :checked="notifyReply" :disabled="notifyBusy" @change="toggleNotify" />
+        <span>{{ t('傾聽者回覆我時寄信通知') }}<small>{{ t('預設關閉。信件主旨和內文只寫「你有一則新通知」，不提樹洞、不含任何對話內容；一小時最多一封。點信裡的連結會打開 hole.fdfz.click。') }}</small></span>
+      </label>
+      <p v-if="notifyError" class="error">{{ t(notifyError) }}</p>
+      <p class="muted tiny">{{ t('傾聽者收到新單、被提醒回覆的信不受這個開關影響。') }}</p>
     </section>
 
     <router-link to="/rules" class="btn plain block">{{ t('樹洞守則') }}</router-link>
