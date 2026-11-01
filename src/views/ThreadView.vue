@@ -169,7 +169,7 @@ async function report() {
       <div v-if="!convs.length" class="card">
         <div class="orig small">{{ thread.body }}</div>
         <p v-if="thread.closed_at" class="muted small">{{ t('這則訊息已經結束。') }}</p>
-        <p v-else-if="thread.waiting" class="muted small">{{ t('已經派給 {n} 位傾聽者，等他們接下。30 分鐘內沒人接，會自動改找別人。', { n: thread.waiting }) }}</p>
+        <p v-else-if="thread.waiting" class="muted small">{{ t('已經派給 {n} 位傾聽者，等他們接下。10 分鐘還沒湊滿兩位，會再多派兩位，先接下的人優先。', { n: thread.waiting }) }}</p>
         <p v-else class="muted small">{{ t('目前沒有可以接單的傾聽者。系統每 5 分鐘會再找一次，有人就會派出。') }}</p>
       </div>
 
@@ -181,7 +181,7 @@ async function report() {
             @click="selected = c.assignment_id"
           ><span class="av">{{ c.n }}</span>{{ who(c) }}<span v-if="c.unread && c.assignment_id !== selected" class="unread">{{ c.unread }}</span></button>
         </div>
-        <p v-if="!thread.closed_at && thread.waiting" class="note small" role="status"><Icon name="clock" :size="20" /><span>{{ t('已經派給 {n} 位新的傾聽者，等他們接下。30 分鐘內沒人接，會自動改找別人。', { n: thread.waiting }) }}</span></p>
+        <p v-if="!thread.closed_at && thread.waiting" class="note small" role="status"><Icon name="clock" :size="20" /><span>{{ t('已經派給 {n} 位新的傾聽者，等他們接下。10 分鐘還沒湊滿，會再多派兩位，先接下的人優先。', { n: thread.waiting }) }}</span></p>
         <p v-else-if="!thread.closed_at && thread.seeking" class="note small" role="status"><Icon name="clock" :size="20" /><span>{{ t('正在幫你找新的傾聽者。目前沒有可以接單的人，系統每 5 分鐘會再找一次，有人就會派出。') }}</span></p>
         <p class="muted tiny">{{ t('傾聽者也是同學，要上課和休息，回覆可能要等幾小時。') }}</p>
         <ChatBox

@@ -160,7 +160,7 @@ async function submit() {
       <h3>{{ t('送出之後會怎樣') }}</h3>
       <ol class="how">
         <li><span class="av">1</span><span>{{ t('系統隨機選出兩位傾聽者，不會選到你換掉過的人。') }}</span></li>
-        <li><span class="av">2</span><span>{{ t('他們先看到話題，按「接下」才讀到全文。30 分鐘內沒人接，會自動改找別人。') }}</span></li>
+        <li><span class="av">2</span><span>{{ t('他們先看到話題，按「接下」才讀到全文。10 分鐘還沒湊滿兩位，會再多派兩位，先接下的人優先；30 分鐘沒接的單會改找別人。') }}</span></li>
         <li><span class="av">3</span><span>{{ t('每位都和你一對一聊，彼此看不到對方的回覆。') }}</span></li>
         <li><span class="av">4</span><span>{{ t('聊得不合可以隨時換人，不用說理由。') }}</span></li>
       </ol>
