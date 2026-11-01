@@ -1,7 +1,7 @@
 // FDFZ 树洞 寄信：每 5 分钟由 pg_cron 叫一次，把 hole_email_outbox 里待寄的通知用 Resend 寄出。
 // 信里只说「有事要处理」和网址，绝不放消息内容或话题。
-// 需要的 Secrets：RESEND_API_KEY（必填）、MAIL_FROM（选填，寄件人）、MAIL_FROM_NEUTRAL（选填，给发出者的中性寄件人）。
-// 给发出者的「有人回复」信（poster_reply）刻意不提树洞：主旨、寄件人、内文都写成一般通知，避免被旁人看出在用树洞。
+// 需要的 Secrets：RESEND_API_KEY（必填）、MAIL_FROM（选填，寄件人）。
+// 给发出者的「有人回复」信（poster_reply）寄件人和其他信一样，主旨和内文只写「有一则新通知」，不放任何内容。
 // SUPABASE_URL、SUPABASE_SERVICE_ROLE_KEY 由 Supabase 自动提供。
 
 const SITE = 'https://hole.fdfz.click'
@@ -62,7 +62,7 @@ function render(kind: string) {
   const m = MAILS[kind]
   const url = SITE + m.path
   const foot = m.neutral
-    ? '这封信由 FDFZ 自动寄出，不用回复。不想再收到，可以在账号页关掉通知。'
+    ? '这封信由 FDFZ 树洞自动寄出，不用回复。不想再收到，可以在树洞的账号页关掉通知。'
     : '这封信由 FDFZ 树洞自动寄出，不用回复。'
   const button = m.neutral ? '打开查看' : '打开树洞'
   const text = [...m.lines, '', url, '', foot].join('\n')
@@ -71,14 +71,12 @@ ${m.lines.map((l) => `<p>${escape(l)}</p>`).join('\n')}
 <p><a href="${url}" style="display:inline-block;background:#2f5d4a;color:#fff;padding:10px 20px;border-radius:999px;text-decoration:none">${escape(button)}</a></p>
 <p style="color:#6b7670;font-size:13px">${escape(foot)}</p>
 </div>`
-  return { subject: m.subject, text, html, neutral: !!m.neutral }
+  return { subject: m.subject, text, html }
 }
 
 async function send(to: string, kind: string) {
-  const { subject, text, html, neutral } = render(kind)
-  const from = neutral
-    ? env('MAIL_FROM_NEUTRAL') || 'FDFZ <notice@fdfz.click>'
-    : env('MAIL_FROM') || 'FDFZ 树洞 <hole@fdfz.click>'
+  const { subject, text, html } = render(kind)
+  const from = env('MAIL_FROM') || 'FDFZ 树洞 <hole@fdfz.click>'
   const res = await fetch('https://api.resend.com/emails', {
     method: 'POST',
     headers: { Authorization: `Bearer ${env('RESEND_API_KEY')}`, 'Content-Type': 'application/json' },

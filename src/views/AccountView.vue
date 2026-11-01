@@ -61,7 +61,7 @@ async function logout() {
       <h3 id="notify-heading">{{ t('通知') }}</h3>
       <label class="check">
         <input type="checkbox" :checked="notifyReply" :disabled="notifyBusy" @change="toggleNotify" />
-        <span>{{ t('傾聽者回覆我時寄信通知') }}<small>{{ t('預設關閉。信件主旨和內文只寫「你有一則新通知」，不提樹洞、不含任何對話內容；一小時最多一封。點信裡的連結會打開 hole.fdfz.click。') }}</small></span>
+        <span>{{ t('傾聽者回覆我時寄信通知') }}<small>{{ t('預設關閉。寄件人是 FDFZ 樹洞（hole@fdfz.click），主旨和內文只寫「你有一則新通知」，不含任何對話內容；一小時最多一封。') }}</small></span>
       </label>
       <p v-if="notifyError" class="error">{{ t(notifyError) }}</p>
       <p class="muted tiny">{{ t('傾聽者收到新單、被提醒回覆的信不受這個開關影響。') }}</p>
