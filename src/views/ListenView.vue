@@ -127,7 +127,7 @@ async function decline(a) {
             <button class="btn" type="button" style="flex: 1" :disabled="busy" @click="accept(a)">{{ t('接下') }}</button>
             <button class="btn plain" type="button" style="flex: 1" :disabled="busy" @click="decline(a)">{{ t('這次不行') }}</button>
           </div>
-          <p class="muted tiny">{{ t('30 分鐘內沒接，會自動轉給別人，不算逾時。') }}</p>
+          <p class="muted tiny">{{ t('30 分鐘內沒接，會自動轉給別人，不算逾時。其他傾聽者先接下的話，這張單會自動收回。') }}</p>
         </div>
       </template>
     </template>
