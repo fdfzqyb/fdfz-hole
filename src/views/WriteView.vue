@@ -6,6 +6,7 @@ import { supabase } from '../supabase'
 import { TOPICS } from '../constants'
 import { HELP } from '../help'
 import { errorText } from '../format'
+import { mentionsCrisis as matchCrisis } from '../crisis'
 import Icon from '../components/Icon.vue'
 import HelpCard from '../components/HelpCard.vue'
 import TabBar from '../components/TabBar.vue'
@@ -17,6 +18,7 @@ const avoidClassmates = ref(true)
 const busy = ref(false)
 const error = ref('')
 const words = ref([])
+const exceptions = ref([])
 const activeAid = ref(null)
 const activeTid = ref(null)
 // 再找上次那位：之前回覆過你、你沒換掉的傾聽者（一段對話一個選項，對方仍然匿名）
@@ -25,11 +27,14 @@ const prefer = ref('')
 
 onMounted(async () => {
   // 危機字詞只做溫和提示：不擋送出、不通知任何人
-  const [w, mine] = await Promise.all([
+  // 例外詞（例如「跳樓價」）先拿掉再比對，避免日常用語跳出提示
+  const [w, ex, mine] = await Promise.all([
     supabase.from('hole_crisis_words').select('word'),
+    supabase.from('hole_crisis_exceptions').select('word'),
     supabase.rpc('hole_my_threads'),
   ])
   words.value = (w.data ?? []).map((x) => x.word)
+  exceptions.value = (ex.data ?? []).map((x) => x.word)
   // 按「我現在需要馬上有人幫忙」時，通知管理員要掛在一段進行中的對話上；用最近那則訊息的。
   // 還沒有人接下的話，掛在最近一則還沒結束的訊息上
   const threads = mine.data ?? []
@@ -45,7 +50,7 @@ const preferOptions = computed(() => pastListeners.value.map((x) => ({
   aid: x.aid,
   label: t('「{text}」的傾聽者 {n}', { text: x.body.length > 10 ? x.body.slice(0, 10) + '…' : x.body, n: x.n }),
 })))
-const mentionsCrisis = computed(() => words.value.some((w) => body.value.includes(w)))
+const mentionsCrisis = computed(() => matchCrisis(body.value, words.value, exceptions.value))
 
 async function submit() {
   error.value = ''
