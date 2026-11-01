@@ -8,6 +8,7 @@ import { auth, loadHole, listenerState } from '../auth'
 import { TOPICS, TOPIC_LABEL } from '../constants'
 import { ago, when, errorText } from '../format'
 import Icon from '../components/Icon.vue'
+import QuickExit from '../components/QuickExit.vue'
 import TabBar from '../components/TabBar.vue'
 
 const router = useRouter()
@@ -80,7 +81,7 @@ async function decline(a) {
 </script>
 
 <template>
-  <header class="topbar"><h1>{{ t('傾聽') }}</h1></header>
+  <header class="topbar"><h1>{{ t('傾聽') }}</h1><QuickExit /></header>
   <div class="page">
     <p v-if="error" class="error">{{ t(error) }}</p>
 

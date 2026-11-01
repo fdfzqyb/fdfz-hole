@@ -6,6 +6,7 @@ import { TOPIC_LABEL } from '../constants'
 import { when, errorText } from '../format'
 import { threadStatus } from '../threads'
 import TabBar from '../components/TabBar.vue'
+import QuickExit from '../components/QuickExit.vue'
 
 const threads = ref(null)
 const error = ref('')
@@ -23,7 +24,7 @@ const closed = computed(() => (threads.value ?? []).filter((x) => x.closed_at))
 </script>
 
 <template>
-  <header class="topbar"><h1>{{ t('我的對話') }}</h1></header>
+  <header class="topbar"><h1>{{ t('我的對話') }}</h1><QuickExit /></header>
   <div class="page">
     <p v-if="error" class="error">{{ t(error) }}</p>
     <p v-else-if="!threads" class="muted center">{{ t('載入中…') }}</p>

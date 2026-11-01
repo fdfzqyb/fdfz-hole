@@ -1,12 +1,15 @@
 <script setup>
 import { t } from '../i18n'
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { TOPICS } from '../constants'
 import { HELP } from '../help'
 import { errorText } from '../format'
 import { mentionsCrisis as matchCrisis } from '../crisis'
+import { loadDraft, saveDraft, clearDraft, draftEnabled, setDraftEnabled } from '../draft'
+import IdentityNote from '../components/IdentityNote.vue'
+import QuickExit from '../components/QuickExit.vue'
 import Icon from '../components/Icon.vue'
 import HelpCard from '../components/HelpCard.vue'
 import TabBar from '../components/TabBar.vue'
@@ -24,6 +27,29 @@ const activeTid = ref(null)
 // 再找上次那位：之前回覆過你、你沒換掉的傾聽者（一段對話一個選項，對方仍然匿名）
 const pastListeners = ref([])
 const prefer = ref('')
+
+// 草稿只存在這台裝置，24 小時後自動清掉；可以關掉
+const keepDraft = ref(draftEnabled())
+const restored = ref(false)
+const saved = loadDraft()
+if (saved) {
+  body.value = saved.body
+  topic.value = saved.topic ?? ''
+  restored.value = true
+}
+let saveTimer = null
+watch([body, topic], () => {
+  clearTimeout(saveTimer)
+  saveTimer = setTimeout(() => saveDraft(body.value, topic.value), 400)
+})
+watch(keepDraft, (on) => setDraftEnabled(on))
+function discardDraft() {
+  clearTimeout(saveTimer)
+  clearDraft()
+  body.value = ''
+  topic.value = ''
+  restored.value = false
+}
 
 onMounted(async () => {
   // 危機字詞只做溫和提示：不擋送出、不通知任何人
@@ -65,6 +91,8 @@ async function submit() {
   })
   busy.value = false
   if (e) return (error.value = errorText(e))
+  clearTimeout(saveTimer)
+  clearDraft()
   const query = {}
   if (data.show_help) query.help = 1
   if (data.preferred != null) query.prefer = data.preferred ? 1 : 0
@@ -77,6 +105,7 @@ async function submit() {
     <div class="brand">
       <img src="/logo.svg" alt="" />
       <h1>{{ t('FDFZ 樹洞') }}</h1>
+      <QuickExit />
     </div>
     <p class="lede">{{ t('想說什麼都可以。會私下派給兩位受過培訓的同學聽，你們看不到彼此是誰，內容也不公開。') }}</p>
   </header>
@@ -86,6 +115,11 @@ async function submit() {
         <span>{{ t('想說的話') }}</span>
         <textarea v-model="body" class="msg" maxlength="2000" :placeholder="t('不用整理好，想到什麼就寫什麼。')" />
       </label>
+      <p v-if="restored" class="muted tiny draft-row">
+        {{ t('已載入上次沒送出的草稿。') }}
+        <button type="button" class="linkbtn" @click="discardDraft">{{ t('清除草稿') }}</button>
+      </p>
+      <IdentityNote :text="body" />
       <div v-if="mentionsCrisis" class="note warn" role="status">
         <Icon name="warn" :size="20" />
         <span>
@@ -112,6 +146,10 @@ async function submit() {
           <option v-for="x in preferOptions" :key="x.aid" :value="String(x.aid)">{{ x.label }}</option>
         </select>
         <small>{{ t('會先派給那位，對方仍然看不到你是誰，也可以婉拒；婉拒或暫停接單時改成隨機派。') }}</small>
+      </label>
+      <label class="check">
+        <input v-model="keepDraft" type="checkbox" />
+        <span>{{ t('在這台裝置存草稿') }}<small>{{ t('沒送出的內容只存在這台裝置的瀏覽器，24 小時後自動清掉。共用電腦請關掉。') }}</small></span>
       </label>
       <p v-if="error" class="error">{{ t(error) }}</p>
       <button class="btn block" :disabled="busy"><Icon name="send" />{{ busy ? t('送出中…') : t('送出') }}</button>
@@ -141,4 +179,6 @@ async function submit() {
 .msg { min-height: 190px; line-height: 1.85; }
 .how { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 12px; }
 .how li { display: flex; gap: 12px; align-items: flex-start; }
+.draft-row { display: flex; gap: 8px; align-items: center; flex-wrap: wrap; margin: -4px 0 0; }
+.linkbtn { background: none; border: 0; padding: 0; color: var(--forest); cursor: pointer; font-size: inherit; text-decoration: underline; }
 </style>

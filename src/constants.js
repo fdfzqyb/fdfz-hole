@@ -24,3 +24,6 @@ export const PLEDGE = [
   '我不評判、不說教，對方想換人時尊重他的決定。',
   '我狀態不好時會先暫停接單，或退出對話。',
 ]
+
+// 快速離開跳去的中性網頁
+export const EXIT_URL = 'https://www.baidu.com/'

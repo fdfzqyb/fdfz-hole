@@ -10,6 +10,7 @@ import { HELP } from '../help'
 import { when, clock, errorText } from '../format'
 import { threadStatus } from '../threads'
 import Icon from '../components/Icon.vue'
+import QuickExit from '../components/QuickExit.vue'
 import Modal from '../components/Modal.vue'
 import ChatBox from '../components/ChatBox.vue'
 import HelpCard from '../components/HelpCard.vue'
@@ -143,6 +144,7 @@ async function report() {
   <header class="topbar">
     <button class="back" type="button" :aria-label="t('返回')" @click="router.push('/mine')"><Icon name="back" :size="24" /></button>
     <h1>{{ t('我的對話') }}</h1>
+    <QuickExit />
   </header>
   <div class="page">
     <p v-if="error" class="error">{{ t(error) }}</p>
@@ -179,6 +181,8 @@ async function report() {
             @click="selected = c.assignment_id"
           ><span class="av">{{ c.n }}</span>{{ who(c) }}<span v-if="c.unread && c.assignment_id !== selected" class="unread">{{ c.unread }}</span></button>
         </div>
+        <p v-if="!thread.closed_at && thread.waiting" class="note small" role="status"><Icon name="clock" :size="20" /><span>{{ t('已經派給 {n} 位新的傾聽者，等他們接下。30 分鐘內沒人接，會自動改找別人。', { n: thread.waiting }) }}</span></p>
+        <p v-else-if="!thread.closed_at && thread.seeking" class="note small" role="status"><Icon name="clock" :size="20" /><span>{{ t('正在幫你找新的傾聽者。目前沒有可以接單的人，系統每 5 分鐘會再找一次，有人就會派出。') }}</span></p>
         <p class="muted tiny">{{ t('傾聽者也是同學，要上課和休息，回覆可能要等幾小時。') }}</p>
         <ChatBox
           v-if="current"
