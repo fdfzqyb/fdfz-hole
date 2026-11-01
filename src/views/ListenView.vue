@@ -2,16 +2,19 @@
 // 傾聽工作台：接單開關、等你接下的單（只看得到話題）、進行中的對話、避開的話題
 import { t } from '../i18n'
 import { ref, computed, onMounted } from 'vue'
-import { useRouter } from 'vue-router'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { auth, loadHole, listenerState } from '../auth'
 import { TOPICS, TOPIC_LABEL } from '../constants'
 import { ago, when, errorText } from '../format'
 import Icon from '../components/Icon.vue'
 import QuickExit from '../components/QuickExit.vue'
+import Modal from '../components/Modal.vue'
+import IdentityNote from '../components/IdentityNote.vue'
 import TabBar from '../components/TabBar.vue'
 
 const router = useRouter()
+const route = useRoute()
 const list = ref(null)
 const lastMsg = ref({}) // assignment_id → 最後一則訊息
 const error = ref('')
@@ -24,7 +27,9 @@ async function load() {
   error.value = ''
   await loadHole()
   if (state.value !== 'qualified' && state.value !== 'suspended') return
-  const { data, error: e } = await supabase.rpc('hole_my_assignments')
+  const [res, cs] = await Promise.all([supabase.rpc('hole_my_assignments'), supabase.rpc('hole_my_consults')])
+  consults.value = cs.data ?? []
+  const { data, error: e } = res
   if (e) return (error.value = errorText(e))
   list.value = data
   // 進行中的對話最多幾段，各讀一次最後一則訊息，判斷是在等誰
@@ -35,6 +40,29 @@ async function load() {
   lastMsg.value = map
 }
 onMounted(load)
+
+// 找管理員聊：不到危機、但不知道怎麼回，或聽完自己不太舒服時。和手上的對話分開，管理員看不到對話內容
+const consults = ref([])
+const openConsult = computed(() => consults.value.find((c) => c.status !== 'closed') ?? null)
+const consultOpen = ref(route.query.consult === '1')
+const consultBody = ref('')
+const consultNamed = ref(false)
+const consultBusy = ref(false)
+const consultError = ref('')
+function startConsult() {
+  if (openConsult.value) return router.push(`/consult/${openConsult.value.id}`)
+  consultOpen.value = true
+}
+async function submitConsult() {
+  consultBusy.value = true
+  consultError.value = ''
+  const { data, error: e } = await supabase.rpc('hole_consult_open', { p_body: consultBody.value.trim(), p_named: consultNamed.value })
+  consultBusy.value = false
+  if (e) return (consultError.value = errorText(e))
+  consultOpen.value = false
+  router.push(`/consult/${data.id}`)
+}
+const CONSULT_LABEL = { pending: '等管理員接下', active: '聊天中', closed: '已結束' }
 
 const pending = computed(() => (list.value ?? []).filter((a) => a.status === 'pending'))
 const active = computed(() => (list.value ?? []).filter((a) => a.status === 'active'))
@@ -157,6 +185,19 @@ async function decline(a) {
       <p class="note"><Icon name="ear" :size="20" /><span>{{ t('累了就切到「暫停」。手上的對話也可以退出，系統會轉給別人。') }}</span></p>
     </template>
 
+    <template v-if="state === 'qualified' || state === 'suspended'">
+      <div class="card">
+        <h3>{{ t('找管理員聊聊') }}</h3>
+        <p class="small">{{ t('不知道怎麼回、聽完自己不太舒服，或只是想找人說說，都可以找一位樹洞管理員聊。預設匿名，管理員看不到你和發出者的對話。') }}</p>
+        <button class="btn plain block" type="button" @click="startConsult">{{ openConsult ? t('回到正在進行的對話') : t('找管理員聊') }}</button>
+        <router-link v-for="c in consults" :key="c.id" :to="`/consult/${c.id}`" class="row consult-row">
+          <span class="muted small">{{ when(c.created_at) }}</span>
+          <span v-if="c.unread" class="status st-alert">{{ t('{n} 則新訊息', { n: c.unread }) }}</span>
+          <span v-else class="status" :class="c.status === 'active' ? 'st-live' : c.status === 'closed' ? 'st-done' : 'st-wait'">{{ t(CONSULT_LABEL[c.status]) }}</span>
+        </router-link>
+      </div>
+    </template>
+
     <template v-if="past.length">
       <h2 class="sec-t">{{ t('之前的對話') }}</h2>
       <router-link v-for="a in past" :key="a.assignment_id" :to="`/listen/${a.assignment_id}`" class="card thread-card">
@@ -169,6 +210,25 @@ async function decline(a) {
     </template>
   </div>
   <TabBar />
+
+  <Modal v-model:open="consultOpen" :title="t('找管理員聊')">
+    <p class="muted small">{{ t('系統會派給一位現在可以接的樹洞管理員。這段對話和你手上的對話分開，管理員看不到你和發出者聊了什麼。') }}</p>
+    <label class="field">
+      <span>{{ t('想聊什麼？') }}</span>
+      <textarea v-model="consultBody" maxlength="2000" :placeholder="t('例如：對方一直說自己很沒用，我不知道該怎麼回比較好。')" style="min-height: 110px" />
+    </label>
+    <IdentityNote :text="consultBody" />
+    <p class="muted tiny">{{ t('不要貼上和發出者的對話，也不要寫出能認出對方的細節。') }}</p>
+    <label class="check">
+      <input v-model="consultNamed" type="checkbox" />
+      <span>{{ t('讓管理員看到我的姓名') }}<small>{{ t('不勾的話，管理員只看到「一位傾聽者」。') }}</small></span>
+    </label>
+    <p v-if="consultError" class="error">{{ t(consultError) }}</p>
+    <div class="actions end">
+      <button class="btn plain" type="button" @click="consultOpen = false">{{ t('取消') }}</button>
+      <button class="btn" type="button" :disabled="consultBusy || !consultBody.trim()" @click="submitConsult">{{ t('送出') }}</button>
+    </div>
+  </Modal>
 </template>
 
 <style scoped>
@@ -177,4 +237,5 @@ async function decline(a) {
 .switch .knob::after { content: ""; position: absolute; top: 3px; left: 23px; width: 24px; height: 24px; border-radius: 50%; background: #fff; transition: left .2s; }
 .switch[aria-checked="false"] .knob { background: #A3ADA7; }
 .switch[aria-checked="false"] .knob::after { left: 3px; }
+.consult-row { color: inherit; padding-top: 10px; border-top: 1px solid var(--border); }
 </style>

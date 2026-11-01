@@ -4,6 +4,7 @@
 // 統計只有次數和時間，不含任何內容或身份
 import { t } from '../i18n'
 import { ref, computed, watch } from 'vue'
+import { useRoute, useRouter } from 'vue-router'
 import { supabase } from '../supabase'
 import { auth } from '../auth'
 import { TOPIC_LABEL, LEAVE_LABEL } from '../constants'
@@ -15,19 +16,25 @@ import TabBar from '../components/TabBar.vue'
 const TABS = [
   { key: 'open', label: '未處理' },
   { key: 'resolved', label: '已處理' },
+  { key: 'consults', label: '傾聽者諮詢' },
   { key: 'listeners', label: '傾聽者' },
   { key: 'stats', label: '統計' },
   { key: 'words', label: '關鍵詞' },
   { key: 'log', label: '操作紀錄' },
   { key: 'admins', label: '管理員' },
 ]
-const tab = ref('open')
+const route = useRoute()
+const router = useRouter()
+const myId = computed(() => auth.session?.user?.id)
+const tab = ref(TABS.some((x) => x.key === route.query.tab) ? route.query.tab : 'open')
 const reports = ref(null)
 const openCount = ref(0)
 const listeners = ref(null)
 const log = ref(null)
 const stats = ref(null)
 const words = ref(null)
+const consults = ref(null)
+const consultAvailable = ref(true)
 const exceptions = ref(null)
 const error = ref('')
 const notice = ref('')
@@ -40,6 +47,14 @@ async function load() {
     if (e) return (error.value = errorText(e))
     reports.value = data
     if (tab.value === 'open') openCount.value = data.length
+  } else if (tab.value === 'consults') {
+    const [list, me] = await Promise.all([
+      supabase.rpc('hole_admin_consults'),
+      supabase.from('hole_admins').select('consult_available').eq('user_id', myId.value).maybeSingle(),
+    ])
+    if (list.error) return (error.value = errorText(list.error))
+    consults.value = list.data
+    consultAvailable.value = me.data?.consult_available ?? true
   } else if (tab.value === 'listeners') {
     const { data, error: e } = await supabase.rpc('hole_admin_listeners')
     if (e) return (error.value = errorText(e))
@@ -222,7 +237,35 @@ const ACTION_LABEL = {
   add_crisis_exception: '新增危機例外詞',
   remove_crisis_exception: '移除危機例外詞',
 }
-const myId = computed(() => auth.session?.user?.id)
+
+// 傾聽者諮詢（找管理員聊）：派給我的先接下才看得到內容；可以切換「可接諮詢」
+const consultBusy = ref(false)
+const CONSULT_LABEL = { pending: '等你接下', active: '聊天中', closed: '已結束' }
+async function setConsultAvailable(on) {
+  consultBusy.value = true
+  const { error: e } = await supabase.rpc('hole_set_consult_available', { p_on: on })
+  consultBusy.value = false
+  if (e) return (error.value = errorText(e))
+  consultAvailable.value = on
+}
+async function acceptConsult(c) {
+  consultBusy.value = true
+  const { error: e } = await supabase.rpc('hole_consult_accept', { cid: c.id })
+  consultBusy.value = false
+  if (e) {
+    error.value = errorText(e)
+    return load()
+  }
+  router.push(`/consult/${c.id}`)
+}
+async function declineConsult(c) {
+  consultBusy.value = true
+  const { error: e } = await supabase.rpc('hole_consult_decline', { cid: c.id })
+  consultBusy.value = false
+  if (e) error.value = errorText(e)
+  else notice.value = '已改派給其他管理員。'
+  load()
+}
 </script>
 
 <template>
@@ -378,6 +421,39 @@ const myId = computed(() => auth.session?.user?.id)
     </template>
 
     <!-- 管理員 -->
+    <!-- 傾聽者諮詢 -->
+    <template v-if="tab === 'consults'">
+      <div class="card">
+        <label class="check">
+          <input type="checkbox" :checked="consultAvailable" :disabled="consultBusy" @change="setConsultAvailable(!consultAvailable)" />
+          <span>{{ t('可接傾聽者諮詢') }}<small>{{ t('傾聽者找管理員聊時，系統會從可接的管理員裡，派給手上諮詢最少的一位。30 分鐘沒接會改派別人。') }}</small></span>
+        </label>
+      </div>
+      <p class="note"><Icon name="lock" :size="20" /><span>{{ t('預設匿名：傾聽者勾了具名才看得到姓名。這段對話和他手上的對話分開，你看不到他和發出者聊了什麼。') }}</span></p>
+      <p v-if="!consults" class="muted center">{{ t('載入中…') }}</p>
+      <p v-else-if="!consults.length" class="empty">{{ t('目前沒有派給你的諮詢。') }}</p>
+      <template v-for="c in consults ?? []" :key="c.id">
+        <div v-if="c.status === 'pending'" class="card">
+          <div class="row">
+            <span class="muted small">{{ c.named ? t('一位具名的傾聽者') : t('一位傾聽者') }} · {{ when(c.offered_at) }}</span>
+            <span class="status st-alert">{{ t(CONSULT_LABEL[c.status]) }}</span>
+          </div>
+          <p class="small">{{ t('有一位傾聽者想找管理員聊聊。接下後才看得到內容。') }}</p>
+          <div class="actions">
+            <button class="btn" type="button" style="flex: 1" :disabled="consultBusy" @click="acceptConsult(c)">{{ t('接下') }}</button>
+            <button class="btn plain" type="button" style="flex: 1" :disabled="consultBusy" @click="declineConsult(c)">{{ t('這次不行') }}</button>
+          </div>
+        </div>
+        <router-link v-else :to="`/consult/${c.id}`" class="card thread-card">
+          <div class="row">
+            <span class="muted small">{{ c.listener_name || t('一位傾聽者') }} · {{ when(c.accepted_at) }}</span>
+            <span v-if="c.unread" class="status st-alert">{{ t('{n} 則新訊息', { n: c.unread }) }}</span>
+            <span v-else class="status" :class="c.status === 'active' ? 'st-live' : 'st-done'">{{ t(CONSULT_LABEL[c.status]) }}</span>
+          </div>
+        </router-link>
+      </template>
+    </template>
+
     <template v-if="tab === 'admins'">
       <div class="card">
         <h3>{{ t('新增或移除樹洞管理員') }}</h3>

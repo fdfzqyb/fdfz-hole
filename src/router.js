@@ -17,6 +17,7 @@ const routes = [
   { path: '/mine/:id', component: () => import('./views/ThreadView.vue') },
   { path: '/listen', component: () => import('./views/ListenView.vue') },
   { path: '/listen/:aid', component: () => import('./views/ListenChatView.vue') },
+  { path: '/consult/:id', component: () => import('./views/ConsultView.vue') },
   { path: '/train', component: () => import('./views/TrainView.vue') },
   { path: '/rules', component: () => import('./views/RulesView.vue') },
   { path: '/account', component: () => import('./views/AccountView.vue') },

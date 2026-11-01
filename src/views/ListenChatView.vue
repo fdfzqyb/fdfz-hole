@@ -53,7 +53,8 @@ async function leave() {
   exitBusy.value = false
   if (e) return (exitError.value = errorText(e))
   exitOpen.value = false
-  router.push('/listen')
+  // 狀態不好時，順手問要不要找管理員聊（不自動暫停接單）
+  router.push(reason.value === 'not_ok' ? '/listen?consult=1' : '/listen')
 }
 
 // 檢舉
@@ -107,6 +108,7 @@ async function report() {
         <li>{{ t('在學校遇到誰，都不要提起這段對話。') }}</li>
         <li>{{ t('認出對方是誰時，退出這段對話，讓系統改派給別人。') }}</li>
       </ul>
+      <p class="small">{{ t('不知道怎麼回，或聽完自己不太舒服？') }}<router-link to="/listen?consult=1">{{ t('找管理員聊聊') }}</router-link></p>
       <button class="btn danger small" type="button" style="align-self: flex-start" @click="reportOpen = true">{{ t('檢舉這段對話') }}</button>
     </div>
   </div>
