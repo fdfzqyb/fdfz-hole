@@ -15,7 +15,14 @@
   --alert: #B04A23;
   --alert-soft: #FBE7DC;
   --radius: 18px;
+  --sq: 1; /* 連續曲率圓角的半徑倍數，見下方 @supports */
   --shadow: 0 1px 2px rgba(30, 70, 50, .06), 0 6px 18px rgba(30, 70, 50, .08);
+}
+
+/* 連續曲率圓角（squircle）：瀏覽器支援 corner-shape 時，方框改成平滑轉角，半徑放大 1.5 倍，看起來才和一般圓角一樣圓。
+   目前 iOS Safari 還不支援，會維持一般圓角，等支援後自動生效。膠囊（999px）和圓形（50%）不套用。 */
+@supports (corner-shape: squircle) {
+  :root { --sq: 1.5; }
 }
 
 * { box-sizing: border-box; }
@@ -55,7 +62,7 @@ button, input, textarea { font: inherit; color: inherit; }
 
 /* 頁首 */
 .home-head {
-  background: var(--sage); border-radius: 0 0 24px 24px;
+  background: var(--sage); border-radius: 0 0 calc(24px * var(--sq)) calc(24px * var(--sq)); corner-shape: squircle;
   display: flex; flex-direction: column; gap: 12px;
   padding: 14px max(20px, env(safe-area-inset-right)) 18px max(20px, env(safe-area-inset-left));
 }
@@ -73,9 +80,9 @@ button, input, textarea { font: inherit; color: inherit; }
 .back { display: grid; place-items: center; padding: 4px; margin-left: -6px; color: var(--ink); background: none; border: 0; cursor: pointer; min-width: 36px; min-height: 36px; }
 
 /* 卡片與提示 */
-.card { background: var(--white); border-radius: var(--radius); box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
+.card { background: var(--white); border-radius: calc(var(--radius) * var(--sq)); corner-shape: squircle; box-shadow: var(--shadow); padding: 18px; display: flex; flex-direction: column; gap: 14px; }
 .card h3 { font-size: 17px; }
-.note { background: var(--mist-deep); border-radius: 12px; padding: 12px 14px; font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
+.note { background: var(--mist-deep); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 12px 14px; font-size: 14px; display: flex; gap: 8px; align-items: flex-start; }
 .note > .ic { margin-top: 1px; }
 .note.warn { background: var(--alert-soft); color: #7A3014; }
 .note.warn .ic { --icon-accent: #F6C9B2; }
@@ -84,7 +91,7 @@ button, input, textarea { font: inherit; color: inherit; }
 /* 按鈕 */
 .btn {
   display: inline-flex; align-items: center; justify-content: center; gap: 6px;
-  font-weight: 600; padding: 12px 18px; border-radius: 12px; min-height: 44px;
+  font-weight: 600; padding: 12px 18px; border-radius: calc(12px * var(--sq)); corner-shape: squircle; min-height: 44px;
   border: 1px solid var(--forest); background: var(--forest); color: var(--white);
   cursor: pointer; white-space: nowrap; --icon-accent: var(--leaf);
 }
@@ -103,7 +110,7 @@ label.field { display: block; }
 label.field > span, .field-t { display: block; font-weight: 600; margin-bottom: 6px; }
 .field small, .field-s { display: block; color: var(--muted); font-size: 13px; margin-top: 4px; }
 textarea, input[type=text], input[type=password], select {
-  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: 12px; background: var(--white);
+  width: 100%; padding: 12px 14px; border: 1px solid var(--border); border-radius: calc(12px * var(--sq)); corner-shape: squircle; background: var(--white);
 }
 textarea:focus, input:focus, select:focus { outline: 2px solid var(--forest); outline-offset: -1px; }
 textarea { min-height: 110px; resize: vertical; }
@@ -130,9 +137,9 @@ textarea { min-height: 110px; resize: vertical; }
 .empty { text-align: center; color: var(--muted); padding: 24px 0; }
 
 /* 聊天 */
-.orig { background: var(--mist); border-radius: 12px; padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
-.seg { display: flex; background: var(--mist-deep); border-radius: 12px; padding: 4px; gap: 4px; overflow-x: auto; }
-.seg button { flex: 1; border: 0; background: none; border-radius: 9px; padding: 8px 10px; cursor: pointer; font-weight: 500; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; white-space: nowrap; }
+.orig { background: var(--mist); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 12px 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.seg { display: flex; background: var(--mist-deep); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 4px; gap: 4px; overflow-x: auto; }
+.seg button { flex: 1; border: 0; background: none; border-radius: calc(9px * var(--sq)); corner-shape: squircle; padding: 8px 10px; cursor: pointer; font-weight: 500; color: var(--muted); display: inline-flex; align-items: center; justify-content: center; gap: 8px; min-height: 40px; white-space: nowrap; }
 .seg button[aria-selected="true"] { background: var(--white); color: var(--ink); font-weight: 700; box-shadow: 0 1px 3px rgba(30, 70, 50, .12); }
 .seg button.ended { opacity: .6; }
 /* 用滑鼠的電腦橫向滑不動，改成換行顯示；手機照樣左右滑 */
@@ -147,10 +154,10 @@ textarea { min-height: 110px; resize: vertical; }
 .stats div + div { border-left: 1px solid var(--border); }
 .stats b { display: block; font-family: "Huninn", sans-serif; font-weight: 400; font-size: 24px; font-variant-numeric: tabular-nums; }
 .stats span { font-size: 13px; color: var(--muted); }
-.veil { border: 1.5px dashed var(--border); border-radius: 12px; padding: 14px; text-align: center; color: var(--muted); font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
+.veil { border: 1.5px dashed var(--border); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 14px; text-align: center; color: var(--muted); font-size: 14px; display: flex; align-items: center; justify-content: center; gap: 6px; }
 
 /* 選項 */
-.opt { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--border); border-radius: 12px; padding: 12px 14px; cursor: pointer; background: var(--white); }
+.opt { display: flex; gap: 12px; align-items: flex-start; border: 1px solid var(--border); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 12px 14px; cursor: pointer; background: var(--white); }
 .opt input { margin-top: 4px; accent-color: var(--forest); width: 18px; height: 18px; flex: none; }
 .opt:has(input:checked) { border-color: var(--forest); background: var(--mist); }
 
@@ -163,12 +170,12 @@ textarea { min-height: 110px; resize: vertical; }
 }
 .tabbar a { display: flex; flex-direction: column; align-items: center; font-size: 13px; color: var(--muted); min-width: 60px; gap: 2px; position: relative; }
 .tabbar a.on { color: var(--forest); font-weight: 700; --icon-accent: var(--leaf); }
-.badge { position: absolute; top: -4px; left: calc(50% + 6px); background: var(--alert); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; text-align: center; padding: 0 5px; }
+.badge { position: absolute; top: -4px; left: calc(50% + 6px); background: var(--alert); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; border-radius: calc(9px * var(--sq)); corner-shape: squircle; text-align: center; padding: 0 5px; }
 /* 列表和分頁上的未讀數 */
 .unread { display: inline-block; background: var(--alert); color: #fff; font-size: 11px; font-weight: 700; min-width: 18px; height: 18px; line-height: 18px; border-radius: 9px; text-align: center; padding: 0 5px; }
 
 /* 對話框 */
-dialog { border: 0; border-radius: var(--radius); padding: 0; max-width: min(440px, calc(100vw - 32px)); width: 100%; background: var(--white); color: var(--ink); box-shadow: 0 12px 40px rgba(20, 40, 30, .25); }
+dialog { border: 0; border-radius: calc(var(--radius) * var(--sq)); corner-shape: squircle; padding: 0; max-width: min(440px, calc(100vw - 32px)); width: 100%; background: var(--white); color: var(--ink); box-shadow: 0 12px 40px rgba(20, 40, 30, .25); }
 dialog::backdrop { background: rgba(28, 41, 37, .45); }
 dialog form { padding: 20px; display: flex; flex-direction: column; gap: 14px; }
 dialog h2 { font-size: 20px; }

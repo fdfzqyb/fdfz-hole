@@ -522,11 +522,11 @@ p.alert, dd.alert, b.alert { color: var(--alert); font-weight: 600; }
 .addword { display: flex; gap: 8px; }
 .addword input { flex: 1; min-width: 0; }
 .case { border-left: 3px solid var(--alert); padding-left: 12px; white-space: pre-line; }
-.bub { max-width: 82%; padding: 8px 12px; border-radius: 14px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bub { max-width: 82%; padding: 8px 12px; border-radius: calc(14px * var(--sq)); corner-shape: squircle; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bub.poster { background: var(--mist); align-self: flex-start; }
 .bub.listener { background: var(--leaf-soft); align-self: flex-end; }
 .bub time { display: block; font-size: 12px; opacity: .7; }
-.idbox { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; background: var(--mist); border-radius: 12px; padding: 12px 14px; margin: 0; }
+.idbox { display: grid; grid-template-columns: auto 1fr; gap: 4px 16px; background: var(--mist); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 12px 14px; margin: 0; }
 .idbox dt { color: var(--muted); }
 .idbox dd { margin: 0; font-weight: 700; word-break: break-all; }
 .log { gap: 10px; }
