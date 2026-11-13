@@ -217,7 +217,7 @@ const passRatio = computed(() => Math.round((auth.hole.config?.quiz_pass_ratio ?
 
 <style scoped>
 .steps { list-style: none; margin: 0; padding: 0; display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 8px; }
-.steps li { border: 1px solid var(--border); background: var(--white); border-radius: 12px; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
+.steps li { border: 1px solid var(--border); background: var(--white); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 8px; display: flex; flex-direction: column; align-items: center; gap: 2px; }
 .steps li span { font-size: 12px; color: var(--muted); }
 .steps li.on { background: var(--forest); border-color: var(--forest); color: #fff; }
 .steps li.on span { color: var(--leaf-soft); }

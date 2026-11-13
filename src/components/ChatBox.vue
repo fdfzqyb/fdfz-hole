@@ -137,7 +137,7 @@ function onKey(e) {
 
 <style scoped>
 .chat { display: flex; flex-direction: column; gap: 10px; }
-.bub { max-width: 82%; padding: 10px 14px; border-radius: 16px; white-space: pre-wrap; overflow-wrap: anywhere; }
+.bub { max-width: 82%; padding: 10px 14px; border-radius: calc(16px * var(--sq)); corner-shape: squircle; white-space: pre-wrap; overflow-wrap: anywhere; }
 .bub.them { background: var(--mist); align-self: flex-start; border-bottom-left-radius: 6px; }
 .bub.prev { background: #E6E9F0; align-self: flex-end; border-bottom-right-radius: 6px; }
 .bub.mine { background: var(--forest); color: #fff; align-self: flex-end; border-bottom-right-radius: 6px; }
@@ -146,7 +146,7 @@ function onKey(e) {
 .composer { display: flex; gap: 8px; align-items: flex-end; }
 .composer textarea { min-height: 46px; height: 46px; flex: 1; }
 .composer .btn { --icon-heart: var(--forest); }
-.history { border: 1px dashed var(--border); border-radius: 12px; padding: 10px 12px; }
+.history { border: 1px dashed var(--border); border-radius: calc(12px * var(--sq)); corner-shape: squircle; padding: 10px 12px; }
 .history summary { cursor: pointer; color: var(--muted); }
 .history .chat { margin-top: 10px; }
 </style>
